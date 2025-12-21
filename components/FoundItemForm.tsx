@@ -16,42 +16,58 @@ export default function FoundItemForm({ uid }: { uid: string }) {
 
   const handleSubmit = async () => {
     if (!file || !location) {
-      alert("Image and location required");
-      return;
+        alert("Image and location required");
+        return;
     }
 
     setLoading(true);
 
-    // Compress image
-    const compressed = await imageCompression(file, {
-      maxSizeMB: 1,
-      maxWidthOrHeight: 1600,
-    });
+    try {
+        const compressed = await imageCompression(file, {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1600,
+        });
 
-    // Upload to Cloudinary
-    const imageUrl = await uploadToCloudinary(compressed as File);
+        const imageUrl = await uploadToCloudinary(compressed as File);
 
-    // Save Firestore item
-    await addDoc(collection(db, "items"), {
-      type: "found",
-      status: "open",
+        const docRef = await addDoc(collection(db, "items"), {
+        type: "found",
+        status: "open",
 
-      images: [imageUrl],
-      blurredImages: [],
+        images: [imageUrl],
+        blurredImages: [],
 
-      aiDescription: "",
-      category: "unknown",
-      colorTags: [],
-      embedding: [],
+        aiDescription: "",
+        category: "unknown",
+        colorTags: [],
+        embedding: [],
 
-      location,
-      createdBy: uid,
-      createdAt: serverTimestamp(),
-    });
+        location,
+        createdBy: uid,
+        createdAt: serverTimestamp(),
+        });
 
-    setLoading(false);
-    alert("Found item reported successfully");
-  };
+        // Fire-and-forget AI analysis
+        fetch("/api/analyze-item", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            itemId: docRef.id,
+            imageUrl,
+        }),
+        });
+
+        alert("Found item reported successfully");
+    } catch (err) {
+        console.error(err);
+        alert("Something went wrong. Please try again.");
+    } finally {
+        setLoading(false);
+    }
+    };
+
 
   return (
     <div className="space-y-4 max-w-md">
