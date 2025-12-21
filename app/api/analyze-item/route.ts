@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import axios from "axios";
+import { getBlurredCloudinaryUrl } from "@/lib/cloudinary";
 // REMOVED: import { doc, updateDoc } from "firebase/firestore";
 // REMOVED: import { db } from "@/lib/firebase";
 
@@ -77,12 +78,20 @@ export async function POST(req: NextRequest) {
     // 4. Update Firestore (USING ADMIN SDK)
     // Admin SDK Syntax: db.collection("name").doc("id").update({...})
     // This bypasses security rules because it uses the service account key.
-    await dbAdmin.collection("items").doc(itemId).update({
-      aiDescription: analysis.description,
-      category: analysis.category,
-      colorTags: analysis.colors,
-      containsSensitiveInfo: analysis.containsSensitiveInfo,
-    });
+    const updateData: any = {
+    aiDescription: analysis.description,
+    category: analysis.category,
+    colorTags: analysis.colors,
+    containsSensitiveInfo: analysis.containsSensitiveInfo,
+    };
+
+    // If sensitive info detected → generate blurred image
+    if (analysis.containsSensitiveInfo) {
+    const blurredUrl = getBlurredCloudinaryUrl(imageUrl);
+    updateData.blurredImages = [blurredUrl];
+    }
+
+    await dbAdmin.collection("items").doc(itemId).update(updateData);
 
     return NextResponse.json({ success: true, data: analysis });
 
