@@ -74,15 +74,22 @@ export async function POST(req: NextRequest) {
             containsSensitiveInfo: false 
         };
     }
+    const embeddingResponse = await ai.models.embedContent({
+    model: "text-embedding-004",
+    contents: `${analysis.description}. Category: ${analysis.category}. Colors: ${analysis.colors.join(", ")}`
+    });
+
+    const embedding = embeddingResponse.embeddings?.[0]?.values || [];
 
     // 4. Update Firestore (USING ADMIN SDK)
     // Admin SDK Syntax: db.collection("name").doc("id").update({...})
     // This bypasses security rules because it uses the service account key.
     const updateData: any = {
-    aiDescription: analysis.description,
-    category: analysis.category,
-    colorTags: analysis.colors,
-    containsSensitiveInfo: analysis.containsSensitiveInfo,
+        aiDescription: analysis.description,
+        category: analysis.category,
+        colorTags: analysis.colors,
+        containsSensitiveInfo: analysis.containsSensitiveInfo,
+        embedding,
     };
 
     // If sensitive info detected → generate blurred image
