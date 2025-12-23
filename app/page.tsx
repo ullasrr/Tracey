@@ -11,7 +11,9 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    if (user) createUserIfNotExists(user);
+    if (user) {
+      createUserIfNotExists(user);
+    }
   }, [user]);
 
   const handleLogout = async () => {

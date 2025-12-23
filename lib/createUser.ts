@@ -12,6 +12,7 @@ export const createUserIfNotExists = async (user: User) => {
       email: user.email,
       name: user.displayName,
       photoURL: user.photoURL,
+      fcmToken: "",
       createdAt: serverTimestamp(),
     },
     { merge: true }
