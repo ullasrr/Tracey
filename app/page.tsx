@@ -118,7 +118,7 @@ export default function Home() {
               {/* Report Found Item */}
               <div
                 onClick={() => router.push("/report/found")}
-                className="cursor-pointer bg-white rounded-2xl shadow-lg hover:shadow-xl p-8 border-2 border-transparent hover:border-green-500"
+                className="cursor-pointer bg-white rounded-2xl shadow-lg hover:shadow-xl p-8 border-2 border-transparent hover:border-green-500 transition-all"
               >
                 <div className="text-5xl mb-4">✅</div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">
@@ -133,21 +133,55 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Report Lost Item (Coming Soon) */}
-              <div className="bg-gray-100 rounded-2xl shadow-lg p-8 relative">
-                <div className="absolute top-4 right-4 bg-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                  Coming Soon
-                </div>
-                <div className="text-5xl mb-4 opacity-50">🔍</div>
-                <h3 className="text-2xl font-bold text-gray-700 mb-2">
+              {/* Report Lost Item */}
+              <div
+                onClick={() => router.push("/search")}
+                className="cursor-pointer bg-white rounded-2xl shadow-lg hover:shadow-xl p-8 border-2 border-transparent hover:border-blue-500 transition-all"
+              >
+                <div className="text-5xl mb-4">🔍</div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
                   Lost an Item?
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  Search through reported found items or create a lost item
-                  report to get notified of matches.
+                  Search found items or report your lost item to get notified
+                  when someone finds it!
                 </p>
-                <div className="text-gray-500 font-medium">
-                  Search Lost Items →
+                <div className="text-blue-600 font-medium">
+                  Search & Report →
+                </div>
+              </div>
+
+              {/* View Matches */}
+              <div
+                onClick={() => router.push("/matches")}
+                className="cursor-pointer bg-white rounded-2xl shadow-lg hover:shadow-xl p-8 border-2 border-transparent hover:border-purple-500 transition-all"
+              >
+                <div className="text-5xl mb-4">🎯</div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  View Matches
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Check AI-powered matches for your lost items. See when someone reports finding a similar item.
+                </p>
+                <div className="text-purple-600 font-medium">
+                  View My Matches →
+                </div>
+              </div>
+
+              {/* Preferences */}
+              <div
+                onClick={() => router.push("/preferences")}
+                className="cursor-pointer bg-white rounded-2xl shadow-lg hover:shadow-xl p-8 border-2 border-transparent hover:border-gray-500 transition-all"
+              >
+                <div className="text-5xl mb-4">⚙️</div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  Notification Settings
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Customize how you receive match notifications. Set your minimum match score and preferences.
+                </p>
+                <div className="text-gray-600 font-medium">
+                  Manage Settings →
                 </div>
               </div>
             </div>
