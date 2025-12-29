@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { dbAdmin } from "@/lib/firebase-admin";
+import { FCMTokenManager } from "@/lib/fcm-token-manager";
 import admin from "firebase-admin";
 
 export const runtime = "nodejs";
 
-// API route to save FCM token for the authenticated user
+// API route to register FCM token using the new token manager
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get("authorization");
@@ -15,19 +15,21 @@ export async function POST(req: NextRequest) {
     const idToken = authHeader.replace("Bearer ", "");
     const decoded = await admin.auth().verifyIdToken(idToken);
 
-    const { fcmToken } = await req.json();
-    if (!fcmToken) {
+    const { token, deviceInfo } = await req.json();
+    
+    if (!token) {
       return NextResponse.json({ error: "Missing token" }, { status: 400 });
     }
 
-    await dbAdmin.collection("users").doc(decoded.uid).set(
-      { fcmToken },
-      { merge: true }
-    );
+    // Register token using FCMTokenManager
+    await FCMTokenManager.registerToken(decoded.uid, token, deviceInfo);
 
     return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("FCM save error:", err);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+  } catch (err: any) {
+    console.error("FCM register error:", err);
+    return NextResponse.json({ 
+      error: "Failed to register token", 
+      details: err.message 
+    }, { status: 500 });
   }
 }

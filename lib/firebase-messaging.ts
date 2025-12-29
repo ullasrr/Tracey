@@ -57,18 +57,32 @@ export async function registerFcmToken() {
 
     const idToken = await auth.currentUser.getIdToken();
 
-    const response = await fetch("/api/save-fcm-token", {
+    // Get device info
+    const deviceInfo = {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+    };
+
+    const response = await fetch("/api/fcm/register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${idToken}`,
       },
-      body: JSON.stringify({ fcmToken }),
+      body: JSON.stringify({ 
+        userId: auth.currentUser.uid,
+        token: fcmToken,
+        deviceInfo 
+      }),
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[FCM] Server response error:", errorText);
       throw new Error(`Failed to save FCM token: ${response.status}`);
     }
+
+    return fcmToken;
   } catch (error) {
     console.error("Error registering FCM token:", error);
     throw error;

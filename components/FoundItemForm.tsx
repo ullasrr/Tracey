@@ -50,17 +50,47 @@ export default function FoundItemForm({ uid }: { uid: string }) {
         createdAt: serverTimestamp(),
         });
 
-        // Fire-and-forget AI analysis
-        fetch("/api/analyze-item", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            itemId: docRef.id,
-            imageUrl,
-        }),
-        });
+        console.log("[FoundItemForm] Created found item:", docRef.id);
+
+        // Wait for AI analysis to complete before triggering auto-match
+        try {
+          const analyzeResponse = await fetch("/api/analyze-item", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              itemId: docRef.id,
+              imageUrl,
+            }),
+          });
+
+          if (!analyzeResponse.ok) {
+            console.error("[FoundItemForm] AI analysis failed:", await analyzeResponse.text());
+          } else {
+            console.log("[FoundItemForm] AI analysis completed successfully");
+            
+            // Now trigger auto-match after AI has generated embeddings
+            const matchResponse = await fetch("/api/auto-match", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                itemId: docRef.id,
+              }),
+            });
+
+            if (matchResponse.ok) {
+              const matchData = await matchResponse.json();
+              console.log("[FoundItemForm] Auto-match result:", matchData);
+            } else {
+              console.error("[FoundItemForm] Auto-match failed:", await matchResponse.text());
+            }
+          }
+        } catch (apiErr) {
+          console.error("[FoundItemForm] API call error:", apiErr);
+        }
 
         setItemSubmitted(true);
         setShowNotificationPrompt(true);
