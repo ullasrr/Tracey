@@ -18,7 +18,7 @@ const MapViewer = dynamic(() => import("@/components/MapViewer"), {
 
 interface Match {
   id: string;
-  lostItemId: string;
+  lostItemId: string | null;
   foundItemId: string;
   lostItemUserId: string;
   foundItemUserId: string;
@@ -29,6 +29,7 @@ interface Match {
   status: "pending" | "claimed" | "dismissed";
   createdAt: Timestamp;
   viewedAt: Timestamp | null;
+  claimedFromSearch?: boolean;
 }
 
 interface Item {
@@ -110,15 +111,17 @@ export default function MatchDetailsPage() {
           return undefined;
         };
 
-        // Get lost item
-        const lostItemDoc = await getDoc(doc(db, "items", matchData.lostItemId));
-        if (lostItemDoc.exists()) {
-          const lostData = lostItemDoc.data();
-          setLostItem({ 
-            id: lostItemDoc.id, 
-            ...lostData,
-            imageUrl: getImageUrl(lostData)
-          } as Item);
+        // Get lost item (only if lostItemId exists - search claims don't have this)
+        if (matchData.lostItemId) {
+          const lostItemDoc = await getDoc(doc(db, "items", matchData.lostItemId));
+          if (lostItemDoc.exists()) {
+            const lostData = lostItemDoc.data();
+            setLostItem({ 
+              id: lostItemDoc.id, 
+              ...lostData,
+              imageUrl: getImageUrl(lostData)
+            } as Item);
+          }
         }
 
         // Get found item
@@ -223,7 +226,7 @@ export default function MatchDetailsPage() {
     );
   }
 
-  if (!match || !lostItem || !foundItem) {
+  if (!match || !foundItem) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
         <div className="text-center">
@@ -262,47 +265,15 @@ export default function MatchDetailsPage() {
           )}
         </div>
 
-        {/* Item Comparison */}
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
-          {/* Lost Item */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold text-purple-600 mb-4">
-              Your Lost Item
-            </h2>
-            {lostItem.imageUrl ? (
-              <img
-                src={lostItem.imageUrl}
-                alt="Lost item"
-                className="w-full h-64 object-cover rounded-lg mb-4 cursor-pointer hover:opacity-90 transition"
-                onClick={() => setFullscreenImage(lostItem.imageUrl!)}
-              />
-            ) : (
-              <div className="w-full h-64 bg-purple-100 rounded-lg mb-4 flex items-center justify-center text-purple-400">
-                No image available
-              </div>
-            )}
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-semibold text-gray-600">Category:</p>
-                <p className="text-gray-800">{lostItem.category || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-600">Your Description:</p>
-                <p className="text-gray-800">{lostItem.description || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-600">AI Analysis:</p>
-                <p className="text-gray-800">{lostItem.aiDescription || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-600">Reported:</p>
-                <p className="text-gray-800">{lostItem.createdAt?.toDate().toLocaleString()}</p>
-              </div>
+        {/* Item Comparison - Different layout for search claims */}
+        {match.claimedFromSearch || !match.lostItemId ? (
+          // Search claim - only show found item
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div className="text-center mb-4">
+              <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                You claimed this item from search
+              </span>
             </div>
-          </div>
-
-          {/* Found Item */}
-          <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold text-blue-600 mb-4">
               Found Item
             </h2>
@@ -310,11 +281,11 @@ export default function MatchDetailsPage() {
               <img
                 src={foundItem.imageUrl}
                 alt="Found item"
-                className="w-full h-64 object-cover rounded-lg mb-4 cursor-pointer hover:opacity-90 transition"
+                className="w-full h-72 object-cover rounded-lg mb-4 cursor-pointer hover:opacity-90 transition"
                 onClick={() => setFullscreenImage(foundItem.imageUrl!)}
               />
             ) : (
-              <div className="w-full h-64 bg-blue-100 rounded-lg mb-4 flex items-center justify-center text-blue-400">
+              <div className="w-full h-72 bg-blue-100 rounded-lg mb-4 flex items-center justify-center text-blue-400">
                 No image available
               </div>
             )}
@@ -324,11 +295,7 @@ export default function MatchDetailsPage() {
                 <p className="text-gray-800">{foundItem.category || "N/A"}</p>
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-600">Finder's Description:</p>
-                <p className="text-gray-800">{foundItem.description || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-600">AI Analysis:</p>
+                <p className="text-sm font-semibold text-gray-600">Description:</p>
                 <p className="text-gray-800">{foundItem.aiDescription || "N/A"}</p>
               </div>
               <div>
@@ -337,7 +304,84 @@ export default function MatchDetailsPage() {
               </div>
             </div>
           </div>
-        </div>
+        ) : (
+          // AI match - show both items side by side
+          <div className="grid md:grid-cols-2 gap-6 mb-6">
+            {/* Lost Item */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-bold text-purple-600 mb-4">
+                Your Lost Item
+              </h2>
+              {lostItem?.imageUrl ? (
+                <img
+                  src={lostItem.imageUrl}
+                  alt="Lost item"
+                  className="w-full h-64 object-cover rounded-lg mb-4 cursor-pointer hover:opacity-90 transition"
+                  onClick={() => setFullscreenImage(lostItem.imageUrl!)}
+                />
+              ) : (
+                <div className="w-full h-64 bg-purple-100 rounded-lg mb-4 flex items-center justify-center text-purple-400">
+                  No image available
+                </div>
+              )}
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Category:</p>
+                  <p className="text-gray-800">{lostItem?.category || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Your Description:</p>
+                  <p className="text-gray-800">{lostItem?.description || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">AI Analysis:</p>
+                  <p className="text-gray-800">{lostItem?.aiDescription || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Reported:</p>
+                  <p className="text-gray-800">{lostItem?.createdAt?.toDate().toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Found Item */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-bold text-blue-600 mb-4">
+                Found Item
+              </h2>
+              {foundItem.imageUrl ? (
+                <img
+                  src={foundItem.imageUrl}
+                  alt="Found item"
+                  className="w-full h-64 object-cover rounded-lg mb-4 cursor-pointer hover:opacity-90 transition"
+                  onClick={() => setFullscreenImage(foundItem.imageUrl!)}
+                />
+              ) : (
+                <div className="w-full h-64 bg-blue-100 rounded-lg mb-4 flex items-center justify-center text-blue-400">
+                  No image available
+                </div>
+              )}
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Category:</p>
+                  <p className="text-gray-800">{foundItem.category || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Finder's Description:</p>
+                  <p className="text-gray-800">{foundItem.description || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">AI Analysis:</p>
+                  <p className="text-gray-800">{foundItem.aiDescription || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Found:</p>
+                  <p className="text-gray-800">{foundItem.createdAt?.toDate().toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Found Location Map */}
         {foundItem.location && foundItem.location.lat && foundItem.location.lng && (
