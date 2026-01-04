@@ -1,21 +1,37 @@
+// Email service using Resend API
+
 import {Resend} from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Send match notification email with details and action button
 export async function sendMatchEmail(
     to: string,
     score: number,
     matchId?: string,
     itemCategory?: string
 ) {
+    // Validate required environment variables
+    if (!process.env.RESEND_API_KEY) {
+        throw new Error("Email service not configured: Missing RESEND_API_KEY");
+    }
+    
+    if (!process.env.EMAIL_FROM) {
+        throw new Error("Email service not configured: Missing EMAIL_FROM");
+    }
+
+    // Validate recipient email
+    if (!to || !to.includes('@')) {
+        throw new Error("Invalid recipient email address");
+    }
+
     const matchUrl = matchId ? `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/matches/${matchId}` : '#';
     
-    await resend.emails.send({
-        from: process.env.EMAIL_FROM as string,
-        to,
-        subject: `🎉 We Found Your Lost ${itemCategory || 'Item'}!`,
-        html: `
+    try {
+        const result = await resend.emails.send({
+            from: process.env.EMAIL_FROM,
+            to,
+            subject: `We Found Your Lost ${itemCategory || 'Item'}!`,
+            html: `
       <!DOCTYPE html>
       <html>
         <head>
@@ -26,7 +42,7 @@ export async function sendMatchEmail(
           <div style="max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
             <!-- Header -->
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-              <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Great News!</h1>
+              <h1 style="color: white; margin: 0; font-size: 28px;">Great News!</h1>
             </div>
             
             <!-- Content -->
@@ -52,7 +68,6 @@ export async function sendMatchEmail(
                 <h3 style="margin-top: 0; color: #f57c00; font-size: 16px;">📋 Next Steps:</h3>
                 <ol style="margin: 10px 0; padding-left: 20px; color: #555;">
                   <li>Review the match details and photos</li>
-                  <li>Verify it's your item</li>
                   <li>Contact the finder to arrange pickup</li>
                 </ol>
               </div>
@@ -67,5 +82,11 @@ export async function sendMatchEmail(
         </body>
       </html>
     `,
-    })
+        });
+        
+        return result;
+    } catch (error: any) {
+        // Don't throw - let push notifications still work
+        return { error: true, message: error.message };
+    }
 }

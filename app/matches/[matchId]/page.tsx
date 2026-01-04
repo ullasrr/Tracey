@@ -31,6 +31,12 @@ interface Item {
   createdAt: Timestamp;
 }
 
+interface UserDetails {
+  email: string;
+  displayName?: string;
+  phoneNumber?: string;
+}
+
 export default function MatchDetailsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -40,6 +46,8 @@ export default function MatchDetailsPage() {
   const [match, setMatch] = useState<Match | null>(null);
   const [lostItem, setLostItem] = useState<Item | null>(null);
   const [foundItem, setFoundItem] = useState<Item | null>(null);
+  const [lostItemOwner, setLostItemOwner] = useState<UserDetails | null>(null);
+  const [finderDetails, setFinderDetails] = useState<UserDetails | null>(null);
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
@@ -63,8 +71,8 @@ export default function MatchDetailsPage() {
 
         const matchData = { id: matchDoc.id, ...matchDoc.data() } as Match;
 
-        // Verify user owns this match
-        if (matchData.lostItemUserId !== user.uid) {
+        // Verify user is part of this match (either owner or finder)
+        if (matchData.lostItemUserId !== user.uid && matchData.foundItemUserId !== user.uid) {
           alert("Unauthorized");
           router.push("/matches");
           return;
@@ -90,10 +98,31 @@ export default function MatchDetailsPage() {
         if (foundItemDoc.exists()) {
           setFoundItem({ id: foundItemDoc.id, ...foundItemDoc.data() } as Item);
         }
+        // Get lost item owner details (for finder to contact)
+        const ownerDoc = await getDoc(doc(db, "users", matchData.lostItemUserId));
+        if (ownerDoc.exists()) {
+          const ownerData = ownerDoc.data();
+          setLostItemOwner({
+            email: ownerData.email || "",
+            displayName: ownerData.displayName || ownerData.name || "Unknown User",
+            phoneNumber: ownerData.phoneNumber || undefined,
+          });
+        }
 
+        // Get finder details (for owner to contact)
+        const finderDoc = await getDoc(doc(db, "users", matchData.foundItemUserId));
+        if (finderDoc.exists()) {
+          const finderData = finderDoc.data();
+          setFinderDetails({
+            email: finderData.email || "",
+            displayName: finderData.displayName || finderData.name || "Unknown User",
+            phoneNumber: finderData.phoneNumber || undefined,
+          });
+        }
+
+        
         setLoadingData(false);
       } catch (error) {
-        console.error("Error loading match:", error);
         alert("Failed to load match details");
         router.push("/matches");
       }
@@ -103,15 +132,28 @@ export default function MatchDetailsPage() {
   }, [user, matchId, router]);
 
   const handleClaim = async () => {
-    if (!match) return;
+    if (!match || !user) return;
     try {
-      await updateDoc(doc(db, "matches", match.id), {
-        status: "claimed",
+      // Use API to claim match (server-side with admin SDK bypasses permissions)
+      const response = await fetch("/api/claim-match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          matchId: match.id, 
+          userId: user.uid 
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to claim match");
+      }
+      
       setMatch({ ...match, status: "claimed" });
-      alert("Match claimed! You can now coordinate with the finder.");
+      alert("Match claimed! The finder can now see your contact details to coordinate the return.");
+      // Reload match details to ensure all data is fresh
+      window.location.reload();
     } catch (error) {
-      console.error("Error claiming match:", error);
       alert("Failed to claim match.");
     }
   };
@@ -124,7 +166,6 @@ export default function MatchDetailsPage() {
       });
       router.push("/matches");
     } catch (error) {
-      console.error("Error dismissing match:", error);
       alert("Failed to dismiss match.");
     }
   };
@@ -246,8 +287,72 @@ export default function MatchDetailsPage() {
           </div>
         </div>
 
+        {/* Contact Details Section (Only for Finder after Confirmation) */}
+        {match.status === "claimed" && user?.uid === match.foundItemUserId && lostItemOwner && (
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg shadow-md p-6 mb-6">
+            <h3 className="text-xl font-bold text-green-900 mb-4 flex items-center gap-2">
+              Owner Contact Details
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 text-gray-700">
+                <div className="text-2xl">👤</div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Name</p>
+                  <p className="font-semibold text-gray-900">{lostItemOwner.displayName || "Not provided"}</p>
+                </div>
+              </div>
+
+              {lostItemOwner.phoneNumber ? (
+                <>
+                  <div className="flex items-start gap-3 text-gray-700">
+                    <div className="text-2xl">📱</div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Phone</p>
+                      <p className="font-semibold text-gray-900">{lostItemOwner.phoneNumber}</p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      const cleanNumber = lostItemOwner.phoneNumber!.replace(/[^\d+]/g, '');
+                      const message = encodeURIComponent("Hi! I found your item through Tracey. Let's arrange the return.");
+                      window.open(`https://wa.me/${cleanNumber}?text=${message}`, '_blank');
+                    }}
+                    className="w-full mt-4 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all shadow-md flex items-center justify-center gap-2 text-lg"
+                  >
+                    <span className="text-2xl">💬</span>
+                    Contact via WhatsApp
+                  </button>
+                </>
+              ) : (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-2">
+                  <p className="text-sm text-yellow-800">
+                    The owner hasn't added their phone number yet. Please ask them to update their profile.
+                  </p>
+                </div>
+              )}
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Tip:</strong> Please coordinate a safe location to return the item to its owner.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Info for Finder before Confirmation */}
+        {match.status === "pending" && user?.uid === match.foundItemUserId && (
+          <div className="bg-blue-50 border-2 border-blue-300 rounded-lg shadow-md p-6 mb-6">
+            <p className="text-blue-900 font-medium">
+              <strong>Waiting for confirmation:</strong> The owner needs to confirm this is their item before you can see their contact details.
+            </p>
+          </div>
+        )}
+
         {/* Actions */}
-        {match.status === "pending" && (
+        {match.status === "pending" && user?.uid === match.lostItemUserId && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-bold text-gray-800 mb-4">
               Is this your item?
@@ -265,6 +370,61 @@ export default function MatchDetailsPage() {
               >
                 Not My Item
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Contact Details Section for Owner to Contact Finder */}
+        {match.status === "claimed" && user?.uid === match.lostItemUserId && finderDetails && (
+          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-300 rounded-lg shadow-md p-6 mb-6">
+            <h3 className="text-xl font-bold text-blue-900 mb-4 flex items-center gap-2">
+              Finder Contact Details
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 text-gray-700">
+                <div className="text-2xl">👤</div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Name</p>
+                  <p className="font-semibold text-gray-900">{finderDetails.displayName || "Not provided"}</p>
+                </div>
+              </div>
+
+              {finderDetails.phoneNumber ? (
+                <>
+                  <div className="flex items-start gap-3 text-gray-700">
+                    <div className="text-2xl">📱</div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Phone</p>
+                      <p className="font-semibold text-gray-900">{finderDetails.phoneNumber}</p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      const cleanNumber = finderDetails.phoneNumber!.replace(/[^\d+]/g, '');
+                      const message = encodeURIComponent("Hi! I saw you found my item on Tracey. Can we arrange a time to meet?");
+                      window.open(`https://wa.me/${cleanNumber}?text=${message}`, '_blank');
+                    }}
+                    className="w-full mt-4 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all shadow-md flex items-center justify-center gap-2 text-lg"
+                  >
+                    <span className="text-2xl">💬</span>
+                    Contact Finder via WhatsApp
+                  </button>
+                </>
+              ) : (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-2">
+                  <p className="text-sm text-yellow-800">
+                    The finder hasn't added their phone number yet. Please ask them to update their profile.
+                  </p>
+                </div>
+              )}
+
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+                <p className="text-sm text-green-800">
+                  <strong>Success!</strong> Contact the finder to coordinate picking up your item.
+                </p>
+              </div>
             </div>
           </div>
         )}

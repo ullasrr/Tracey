@@ -8,10 +8,20 @@ import { auth } from "@/lib/firebase";
 async function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
     try {
-      const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+      // Check if service worker is already registered
+      const existing = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
+      if (existing) {
+        return existing;
+      }
+
+      const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", {
+        scope: "/",
+      });
+      
+      // Wait for service worker to be ready
+      await navigator.serviceWorker.ready;
       return registration;
     } catch (error) {
-      console.error("Service Worker registration failed:", error);
       throw error;
     }
   }
@@ -26,9 +36,9 @@ export async function registerFcmToken() {
       throw new Error("Notifications not supported in this browser");
     }
 
-    // Register service worker first
-    await registerServiceWorker();
-
+    // Register service worker first and wait for it to be ready
+    const registration = await registerServiceWorker();
+    
     // Request permission - this will show the browser prompt
     let permission = Notification.permission;
     
@@ -47,12 +57,34 @@ export async function registerFcmToken() {
 
     const messaging = getMessaging(app);
 
-    const fcmToken = await getToken(messaging, {
-      vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
-    });
+    // Validate VAPID key
+    const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+    if (!vapidKey) {
+      throw new Error("VAPID key not configured");
+    }
+
+    let fcmToken;
+    try {
+      fcmToken = await getToken(messaging, {
+        vapidKey: vapidKey,
+        serviceWorkerRegistration: registration,
+      });
+    } catch (tokenError: any) {
+      // Specific error handling for push service errors
+      if (tokenError.code === 'messaging/failed-service-worker-registration' || 
+          tokenError.message?.includes('push service error')) {
+        throw new Error(
+          "Push notifications are not available in this browser. " +
+          "This can happen due to browser settings or network restrictions. " +
+          "Please try Chrome or Firefox, or check your browser's notification settings."
+        );
+      }
+      
+      throw tokenError;
+    }
 
     if (!fcmToken) {
-      throw new Error("Failed to get FCM token");
+      throw new Error("Failed to get FCM token - empty token returned");
     }
 
     const idToken = await auth.currentUser.getIdToken();
@@ -78,13 +110,11 @@ export async function registerFcmToken() {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[FCM] Server response error:", errorText);
-      throw new Error(`Failed to save FCM token: ${response.status}`);
+      throw new Error(`Failed to save FCM token: ${response.status} - ${errorText}`);
     }
 
     return fcmToken;
   } catch (error) {
-    console.error("Error registering FCM token:", error);
     throw error;
   }
 }

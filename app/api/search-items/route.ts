@@ -26,7 +26,6 @@ export async function POST(req: NextRequest) {
 
     // 1. If Image is provided, convert it to text description first
     if (searchImage) {
-        console.log("🖼️ Processing Search Image...");
         // Clean base64 header if present
         const cleanBase64 = searchImage.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
         
@@ -43,7 +42,6 @@ export async function POST(req: NextRequest) {
         });
         
         const description = visionResponse.text || "";
-        console.log("🤖 Image converted to search text:", description);
         
         // If user provided text AND image, combine them
         textToSearch = query ? `${query} ${description}` : description;
@@ -57,20 +55,17 @@ export async function POST(req: NextRequest) {
 
     const queryEmbedding = embedResponse.embeddings?.[0]?.values || [];
 
-    // 3. Search Database
-    const snapshot = await dbAdmin.collection("items").get();
+    // 3. Search Database - only search "open" items (not claimed or dismissed)
+    const snapshot = await dbAdmin.collection("items")
+      .where("status", "==", "open")
+      .get();
     const results: any[] = [];
-
-    console.log(`\n🔍 Searching for: "${textToSearch.substring(0, 50)}..."`);
 
     snapshot.forEach((doc) => {
       const data = doc.data();
       if (!data.embedding) return;
 
       const score = cosineSimilarity(queryEmbedding, data.embedding);
-
-      // DEBUG LOG
-      // console.log(`Item [${doc.id}]: Score: ${score.toFixed(4)}`);
 
       if (score >= SIMILARITY_THRESHOLD) {
         results.push({
@@ -89,7 +84,6 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (err: any) {
-    console.error("Search error:", err);
     return NextResponse.json({ error: "Search failed", details: err.message }, { status: 500 });
   }
 }

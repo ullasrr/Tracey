@@ -2,11 +2,12 @@ importScripts("https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"
 importScripts("https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js");
 
 firebase.initializeApp({
-  apiKey: "AIzaSyAHQ5b4FcXZ_BFAhsb-SJaJqIv9KVegoUU",
-  authDomain: "tracey-849f2.firebaseapp.com",
-  projectId: "tracey-849f2",
-  messagingSenderId: "301674807484",
-  appId: "1:301674807484:web:20ed8499840d72855cd0b9",
+  apiKey: "AIzaSyBzxukT_Lgm7GiJhzibwe0MOcop-yHz7-8",
+  authDomain: "tracey-4e989.firebaseapp.com",
+  projectId: "tracey-4e989",
+  storageBucket: "tracey-4e989.firebasestorage.app",
+  messagingSenderId: "753030575212",
+  appId: "1:753030575212:web:9a6317ac862a761562d449",
 });
 
 const messaging = firebase.messaging();

@@ -1,3 +1,5 @@
+// Matches found items against lost items and notifies owners
+
 import { sendMatchEmail } from "@/lib/email";
 import { dbAdmin } from "@/lib/firebase-admin";
 import { NextRequest, NextResponse } from "next/server";
@@ -6,6 +8,7 @@ import { FCMTokenManager } from "@/lib/fcm-token-manager";
 
 export const runtime = "nodejs";
 
+// Calculate similarity between two embedding vectors
 function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length || a.length === 0) return 0;
   
@@ -28,21 +31,18 @@ export async function POST(req: NextRequest) {
     // Get the found item
     const foundItemDoc = await dbAdmin.collection("items").doc(itemId).get();
     if (!foundItemDoc.exists) {
-      console.error("[Auto-Match] Item not found:", itemId);
       return NextResponse.json({ error: "Item not found" }, { status: 404 });
     }
 
     const foundItem = foundItemDoc.data();
     
     if (foundItem?.type !== "found") {
-      console.error("[Auto-Match] Item is not type 'found':", foundItem?.type);
       return NextResponse.json({ 
         error: "Invalid item for matching - must be found item with embedding" 
       }, { status: 400 });
     }
     
     if (!foundItem.embedding || foundItem.embedding.length === 0) {
-      console.error("[Auto-Match] Found item has no embedding yet");
       return NextResponse.json({ 
         error: "Found item has no embedding - AI analysis may not be complete" 
       }, { status: 400 });
@@ -101,8 +101,8 @@ export async function POST(req: NextRequest) {
         });
 
         // Step 2: Send notifications (non-blocking)
-        sendNotificationsAsync(matchRef.id, match.createdBy, match.score, match.category || "item").catch(err => {
-          console.error(`[Auto-Match] Notification async error:`, err);
+        sendNotificationsAsync(matchRef.id, match.createdBy, match.score, match.category || "item").catch(() => {
+          // Notification error - will be queued for retry
         });
 
         notificationResults.push({
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
           status: "match_created",
         });
       } catch (err) {
-        console.error(`[Auto-Match] Error processing match ${match.id}:`, err);
+        // Match processing error - continue with other matches
       }
     }
 
@@ -125,7 +125,6 @@ export async function POST(req: NextRequest) {
     
     return NextResponse.json(result);
   } catch (err: any) {
-    console.error("[Auto-Match] Error:", err);
     return NextResponse.json({ 
       error: "Auto-match failed", 
       details: err.message 
@@ -145,7 +144,6 @@ async function sendNotificationsAsync(
     const userData = userDoc.data();
 
     if (!userData) {
-      console.warn(`[Notifications] User ${userId} not found`);
       return;
     }
 
@@ -169,7 +167,6 @@ async function sendNotificationsAsync(
         await sendMatchEmail(userData.email, score, matchId, itemCategory);
         emailSent = true;
       } catch (err) {
-        console.error("[Notifications] Email failed:", err);
         // Add to retry queue
         await addToNotificationQueue(matchId, userId, "email");
       }
@@ -179,7 +176,7 @@ async function sendNotificationsAsync(
     if (pushEnabled) {
       try {
         const fcmResult = await FCMTokenManager.sendToUser(userId, {
-          title: "🎉 Item Match Found!",
+          title: "Item Match Found!",
           body: `We found a ${(score * 100).toFixed(0)}% match for your lost ${itemCategory}`,
           data: {
             matchId: matchId,
@@ -196,7 +193,6 @@ async function sendNotificationsAsync(
           await addToNotificationQueue(matchId, userId, "fcm");
         }
       } catch (err) {
-        console.error("[Notifications] FCM failed:", err);
         await addToNotificationQueue(matchId, userId, "fcm");
       }
     }
@@ -208,7 +204,7 @@ async function sendNotificationsAsync(
       lastNotificationAttempt: admin.firestore.FieldValue.serverTimestamp(),
     });
   } catch (error) {
-    console.error("[Notifications] Fatal error:", error);
+    // Fatal error - notification failed
   }
 }
 
@@ -229,7 +225,7 @@ async function addToNotificationQueue(
       nextRetryAt: admin.firestore.FieldValue.serverTimestamp(),
     });
   } catch (error) {
-    console.error("[Queue] Failed to add to queue:", error);
+    // Failed to add to queue
   }
 }
 

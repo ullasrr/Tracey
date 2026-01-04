@@ -26,7 +26,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error("FCM register error:", err);
     return NextResponse.json({ 
       error: "Failed to register token", 
       details: err.message 
