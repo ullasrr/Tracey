@@ -8,9 +8,11 @@ import { addDoc, collection, serverTimestamp, doc, getDoc, setDoc } from "fireba
 import { db } from "@/lib/firebase";
 import MapPicker from "@/components/MapPicker";
 import { registerFcmToken } from "@/lib/firebase-messaging";
+import { useRouter } from "next/navigation";
 
 export default function SearchPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [results, setResults] = useState<any[]>([]);
@@ -249,6 +251,10 @@ export default function SearchPage() {
     }
   };
 
+  const handleViewItem = (itemId: string) => {
+    router.push(`/item/${itemId}`);
+  };
+
   return (
     <div className="p-6 max-w-xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-center">Find Your Lost Item</h1>
@@ -444,22 +450,36 @@ export default function SearchPage() {
         )}
 
         {results.map((item) => (
-          <div key={item.id} className="border p-4 rounded-lg shadow-sm flex gap-4 hover:shadow-md transition bg-white">
-            <img
-              src={item.blurredImages?.length ? item.blurredImages[0] : (item.images?.[0] || "/placeholder.png")}
-              className="w-24 h-24 object-cover rounded-md shrink-0"
-              alt="Item"
-            />
-            <div className="flex-1">
-              <p className="font-semibold text-lg text-gray-800">{item.category}</p>
-              <p className="text-sm text-gray-600 line-clamp-2 mt-1">{item.aiDescription}</p>
-              <div className="mt-2 flex gap-2">
-                {item.colorTags?.map((c: string) => (
-                    <span key={c} className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">{c}</span>
-                ))}
-                {/* Debug Score */}
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Match: {(item.score * 100).toFixed(0)}%</span>
+          <div key={item.id} className="border p-4 rounded-lg shadow-sm hover:shadow-md transition bg-white">
+            <div className="flex gap-4">
+              <img
+                src={item.blurredImages?.length ? item.blurredImages[0] : (item.images?.[0] || "/placeholder.png")}
+                className="w-24 h-24 object-cover rounded-md shrink-0"
+                alt="Item"
+              />
+              <div className="flex-1">
+                <p className="font-semibold text-lg text-gray-800">{item.category}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {item.colorTags?.map((c: string) => (
+                      <span key={c} className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">{c}</span>
+                  ))}
+                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Match: {(item.score * 100).toFixed(0)}%</span>
+                </div>
               </div>
+            </div>
+            
+            {/* View Details Button */}
+            <div className="mt-4 pt-3 border-t">
+              <button
+                onClick={() => handleViewItem(item.id)}
+                className="w-full py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition flex items-center justify-center gap-2"
+              >
+                <span>👁</span>
+                View Details & Claim
+              </button>
+              <p className="text-xs text-gray-500 text-center mt-2">
+                See location, finder info, and claim if it's yours
+              </p>
             </div>
           </div>
         ))}

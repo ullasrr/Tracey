@@ -8,7 +8,7 @@ import { db } from "@/lib/firebase";
 
 interface Match {
   id: string;
-  lostItemId: string;
+  lostItemId: string | null;
   foundItemId: string;
   lostItemUserId: string;
   foundItemUserId: string;
@@ -21,6 +21,7 @@ interface Match {
   emailSent: boolean;
   createdAt: Timestamp;
   viewedAt: Timestamp | null;
+  claimedFromSearch?: boolean;
   // Added for images
   foundItemImageUrl?: string;
   lostItemImageUrl?: string;
@@ -58,14 +59,6 @@ export default function MatchesPage() {
     // Fetch item images for a match
     const fetchItemImages = async (matchData: Match): Promise<Match> => {
       try {
-        const [foundItemDoc, lostItemDoc] = await Promise.all([
-          getDoc(doc(db, "items", matchData.foundItemId)),
-          getDoc(doc(db, "items", matchData.lostItemId))
-        ]);
-        
-        const foundData = foundItemDoc.exists() ? foundItemDoc.data() : null;
-        const lostData = lostItemDoc.exists() ? lostItemDoc.data() : null;
-        
         // Images can be stored as 'imageUrl' (string) or 'images' (array)
         const getImageUrl = (data: any) => {
           if (!data) return undefined;
@@ -73,6 +66,20 @@ export default function MatchesPage() {
           if (data.images && data.images.length > 0) return data.images[0];
           return undefined;
         };
+
+        let foundData = null;
+        let lostData = null;
+
+        // Only fetch if IDs exist (lostItemId can be null for search claims)
+        if (matchData.foundItemId) {
+          const foundItemDoc = await getDoc(doc(db, "items", matchData.foundItemId));
+          foundData = foundItemDoc.exists() ? foundItemDoc.data() : null;
+        }
+
+        if (matchData.lostItemId) {
+          const lostItemDoc = await getDoc(doc(db, "items", matchData.lostItemId));
+          lostData = lostItemDoc.exists() ? lostItemDoc.data() : null;
+        }
         
         return {
           ...matchData,
@@ -269,71 +276,114 @@ export default function MatchesPage() {
                       {match.lostItemCategory || "Item"}
                     </h3>
 
-                    {/* Item Images Comparison */}
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="bg-purple-50 p-2 rounded-lg">
-                        <p className="text-xs font-semibold text-purple-800 mb-2 text-center">Your Lost Item</p>
-                        {match.lostItemImageUrl ? (
-                          <img
-                            src={match.lostItemImageUrl}
-                            alt="Your lost item"
-                            className="w-full h-32 object-cover rounded-lg border-2 border-purple-200 cursor-pointer hover:opacity-90 transition"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setFullscreenImage(match.lostItemImageUrl!);
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-32 bg-purple-100 rounded-lg flex items-center justify-center text-purple-400">
-                            No image
-                          </div>
-                        )}
-                      </div>
-                      <div className="bg-blue-50 p-2 rounded-lg">
-                        <p className="text-xs font-semibold text-blue-800 mb-2 text-center">Found Item</p>
-                        {match.foundItemImageUrl ? (
-                          <img
-                            src={match.foundItemImageUrl}
-                            alt="Found item"
-                            className="w-full h-32 object-cover rounded-lg border-2 border-blue-200 cursor-pointer hover:opacity-90 transition"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setFullscreenImage(match.foundItemImageUrl!);
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-32 bg-blue-100 rounded-lg flex items-center justify-center text-blue-400">
-                            No image
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Item Details */}
-                    <div className="mb-4">
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="bg-purple-50 p-3 rounded-lg">
-                          <p className="text-sm font-semibold text-purple-800 mb-1">
-                            Your Description:
-                          </p>
-                          <p className="text-sm text-gray-700">
-                            {match.lostItemDescription || "No description"}
-                          </p>
+                    {/* Item Images - Different layout for search claims vs AI matches */}
+                    {match.claimedFromSearch || !match.lostItemId ? (
+                      // Search claim - only show found item
+                      <div className="mb-4">
+                        <div className="bg-blue-50 p-3 rounded-lg">
+                          <p className="text-xs font-semibold text-blue-800 mb-2 text-center">Found Item</p>
+                          {match.foundItemImageUrl ? (
+                            <img
+                              src={match.foundItemImageUrl}
+                              alt="Found item"
+                              className="w-full h-40 object-cover rounded-lg border-2 border-blue-200 cursor-pointer hover:opacity-90 transition"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFullscreenImage(match.foundItemImageUrl!);
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-40 bg-blue-100 rounded-lg flex items-center justify-center text-blue-400">
+                              No image
+                            </div>
+                          )}
                         </div>
+                        <p className="text-xs text-gray-500 text-center mt-2">
+                          You claimed this item from search
+                        </p>
+                      </div>
+                    ) : (
+                      // AI match - show both items side by side
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="bg-purple-50 p-2 rounded-lg">
+                          <p className="text-xs font-semibold text-purple-800 mb-2 text-center">Your Lost Item</p>
+                          {match.lostItemImageUrl ? (
+                            <img
+                              src={match.lostItemImageUrl}
+                              alt="Your lost item"
+                              className="w-full h-32 object-cover rounded-lg border-2 border-purple-200 cursor-pointer hover:opacity-90 transition"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFullscreenImage(match.lostItemImageUrl!);
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-32 bg-purple-100 rounded-lg flex items-center justify-center text-purple-400">
+                              No image
+                            </div>
+                          )}
+                        </div>
+                        <div className="bg-blue-50 p-2 rounded-lg">
+                          <p className="text-xs font-semibold text-blue-800 mb-2 text-center">Found Item</p>
+                          {match.foundItemImageUrl ? (
+                            <img
+                              src={match.foundItemImageUrl}
+                              alt="Found item"
+                              className="w-full h-32 object-cover rounded-lg border-2 border-blue-200 cursor-pointer hover:opacity-90 transition"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFullscreenImage(match.foundItemImageUrl!);
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-32 bg-blue-100 rounded-lg flex items-center justify-center text-blue-400">
+                              No image
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Item Details - Different for search claims */}
+                    {match.claimedFromSearch || !match.lostItemId ? (
+                      // Search claim - only show found item description
+                      <div className="mb-4">
                         <div className="bg-blue-50 p-3 rounded-lg">
                           <p className="text-sm font-semibold text-blue-800 mb-1">
-                            Found Item:
+                            Item Description:
                           </p>
                           <p className="text-sm text-gray-700">
                             {match.foundItemDescription || "No description"}
                           </p>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      // AI match - show both descriptions
+                      <div className="mb-4">
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="bg-purple-50 p-3 rounded-lg">
+                            <p className="text-sm font-semibold text-purple-800 mb-1">
+                              Your Description:
+                            </p>
+                            <p className="text-sm text-gray-700">
+                              {match.lostItemDescription || "No description"}
+                            </p>
+                          </div>
+                          <div className="bg-blue-50 p-3 rounded-lg">
+                            <p className="text-sm font-semibold text-blue-800 mb-1">
+                              Found Item:
+                            </p>
+                            <p className="text-sm text-gray-700">
+                              {match.foundItemDescription || "No description"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Timestamp */}
                     <p className="text-sm text-gray-500">
-                      Matched {match.createdAt?.toDate().toLocaleString()}
+                      {match.claimedFromSearch || !match.lostItemId ? "Claimed" : "Matched"} {match.createdAt?.toDate().toLocaleString()}
                     </p>
                   </div>
                 </div>
