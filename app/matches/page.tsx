@@ -3,7 +3,7 @@
 import { useAuth } from "@/lib/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { collection, query, where, onSnapshot, doc, updateDoc, Timestamp } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, updateDoc, getDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface Match {
@@ -21,6 +21,9 @@ interface Match {
   emailSent: boolean;
   createdAt: Timestamp;
   viewedAt: Timestamp | null;
+  // Added for images
+  foundItemImageUrl?: string;
+  lostItemImageUrl?: string;
 }
 
 export default function MatchesPage() {
@@ -28,6 +31,7 @@ export default function MatchesPage() {
   const router = useRouter();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(true);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -51,13 +55,50 @@ export default function MatchesPage() {
 
     const allMatches = new Map<string, Match>();
 
-    const updateMatchesFromSnapshot = (snapshot: any) => {
+    // Fetch item images for a match
+    const fetchItemImages = async (matchData: Match): Promise<Match> => {
+      try {
+        const [foundItemDoc, lostItemDoc] = await Promise.all([
+          getDoc(doc(db, "items", matchData.foundItemId)),
+          getDoc(doc(db, "items", matchData.lostItemId))
+        ]);
+        
+        const foundData = foundItemDoc.exists() ? foundItemDoc.data() : null;
+        const lostData = lostItemDoc.exists() ? lostItemDoc.data() : null;
+        
+        // Images can be stored as 'imageUrl' (string) or 'images' (array)
+        const getImageUrl = (data: any) => {
+          if (!data) return undefined;
+          if (data.imageUrl) return data.imageUrl;
+          if (data.images && data.images.length > 0) return data.images[0];
+          return undefined;
+        };
+        
+        return {
+          ...matchData,
+          foundItemImageUrl: getImageUrl(foundData),
+          lostItemImageUrl: getImageUrl(lostData),
+        };
+      } catch {
+        return matchData;
+      }
+    };
+
+    const updateMatchesFromSnapshot = async (snapshot: any) => {
+      const fetchPromises: Promise<void>[] = [];
+      
       snapshot.docs.forEach((docSnap: any) => {
         const matchData = {
           id: docSnap.id,
           ...docSnap.data(),
         } as Match;
-        allMatches.set(docSnap.id, matchData);
+        
+        // Fetch images and update map
+        fetchPromises.push(
+          fetchItemImages(matchData).then((matchWithImages) => {
+            allMatches.set(docSnap.id, matchWithImages);
+          })
+        );
 
         // Mark unviewed matches as viewed
         if (!docSnap.data().viewedAt) {
@@ -66,6 +107,8 @@ export default function MatchesPage() {
           }).catch(() => {});
         }
       });
+
+      await Promise.all(fetchPromises);
 
       // Convert map to array and sort
       const matchesArray = Array.from(allMatches.values());
@@ -106,7 +149,6 @@ export default function MatchesPage() {
     if (!user) return;
     
     try {
-      // Use API to claim match (server-side with admin SDK bypasses permissions)
       const response = await fetch("/api/claim-match", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -116,14 +158,16 @@ export default function MatchesPage() {
         }),
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to claim match");
+        alert(data.error || "Failed to claim match");
+        return;
       }
       
       alert("Match claimed! You can now coordinate with the finder.");
-    } catch (error) {
-      alert("Failed to claim match. Please try again.");
+    } catch (error: any) {
+      alert(error.message || "Failed to claim match. Please try again.");
     }
   };
 
@@ -220,11 +264,53 @@ export default function MatchesPage() {
                       )}
                     </div>
 
+                    {/* Category */}
+                    <h3 className="text-xl font-semibold text-gray-800 mb-3">
+                      {match.lostItemCategory || "Item"}
+                    </h3>
+
+                    {/* Item Images Comparison */}
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="bg-purple-50 p-2 rounded-lg">
+                        <p className="text-xs font-semibold text-purple-800 mb-2 text-center">Your Lost Item</p>
+                        {match.lostItemImageUrl ? (
+                          <img
+                            src={match.lostItemImageUrl}
+                            alt="Your lost item"
+                            className="w-full h-32 object-cover rounded-lg border-2 border-purple-200 cursor-pointer hover:opacity-90 transition"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFullscreenImage(match.lostItemImageUrl!);
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-32 bg-purple-100 rounded-lg flex items-center justify-center text-purple-400">
+                            No image
+                          </div>
+                        )}
+                      </div>
+                      <div className="bg-blue-50 p-2 rounded-lg">
+                        <p className="text-xs font-semibold text-blue-800 mb-2 text-center">Found Item</p>
+                        {match.foundItemImageUrl ? (
+                          <img
+                            src={match.foundItemImageUrl}
+                            alt="Found item"
+                            className="w-full h-32 object-cover rounded-lg border-2 border-blue-200 cursor-pointer hover:opacity-90 transition"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFullscreenImage(match.foundItemImageUrl!);
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-32 bg-blue-100 rounded-lg flex items-center justify-center text-blue-400">
+                            No image
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     {/* Item Details */}
                     <div className="mb-4">
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                        {match.lostItemCategory || "Item"}
-                      </h3>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div className="bg-purple-50 p-3 rounded-lg">
                           <p className="text-sm font-semibold text-purple-800 mb-1">
@@ -252,8 +338,8 @@ export default function MatchesPage() {
                   </div>
                 </div>
 
-                {/* Actions */}
-                {match.status === "pending" && (
+                {/* Actions - Only show to lost item owner */}
+                {match.status === "pending" && user?.uid === match.lostItemUserId && (
                   <div className="flex gap-3 mt-4 pt-4 border-t">
                     <button
                       onClick={(e) => {
@@ -262,7 +348,7 @@ export default function MatchesPage() {
                       }}
                       className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
                     >
-                      ✓ This is My Item
+                      This is My Item
                     </button>
                     <button
                       onClick={(e) => {
@@ -273,6 +359,15 @@ export default function MatchesPage() {
                     >
                       Not My Item
                     </button>
+                  </div>
+                )}
+
+                {/* Info for finder - waiting for owner to confirm */}
+                {match.status === "pending" && user?.uid === match.foundItemUserId && (
+                  <div className="mt-4 pt-4 border-t">
+                    <p className="text-center text-gray-600 bg-yellow-50 p-3 rounded-lg">
+                      Waiting for the owner to confirm this is their item
+                    </p>
                   </div>
                 )}
 
@@ -295,6 +390,27 @@ export default function MatchesPage() {
           </div>
         )}
       </div>
+
+      {/* Fullscreen Image Modal */}
+      {fullscreenImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+          onClick={() => setFullscreenImage(null)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white text-4xl font-bold hover:text-gray-300 transition"
+            onClick={() => setFullscreenImage(null)}
+          >
+            ×
+          </button>
+          <img
+            src={fullscreenImage}
+            alt="Full size"
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
