@@ -1,9 +1,10 @@
+// Cron endpoint to process failed notification retries
+
 import { NextRequest, NextResponse } from "next/server";
 import { NotificationQueueProcessor } from "@/lib/notification-queue";
 
 export const runtime = "nodejs";
 
-// This endpoint can be called by a cron job or manually to process the queue
 export async function POST(req: NextRequest) {
   try {
     // Optional: Verify cron secret for security
@@ -21,7 +22,6 @@ export async function POST(req: NextRequest) {
       message: "Queue processed successfully" 
     });
   } catch (error: any) {
-    console.error("[Cron] Error:", error);
     return NextResponse.json({ 
       error: "Queue processing failed", 
       details: error.message 

@@ -1,3 +1,5 @@
+// Handles failed notification retries with exponential backoff
+
 import { dbAdmin } from "./firebase-admin";
 import { FCMTokenManager } from "./fcm-token-manager";
 import { sendMatchEmail } from "./email";
@@ -21,9 +23,7 @@ const RETRY_DELAYS = [60000, 300000, 900000]; // 1min, 5min, 15min
 export class NotificationQueueProcessor {
   private static isProcessing = false;
 
-  /**
-   * Process pending notifications in the queue with exponential backoff
-   */
+  // Process pending notifications with exponential backoff
   static async processQueue() {
     if (this.isProcessing) {
       return;
@@ -48,15 +48,13 @@ export class NotificationQueueProcessor {
         await this.processItem(item);
       }
     } catch (error) {
-      console.error("[Queue] Processing error:", error);
+      // Queue processing error - will retry on next run
     } finally {
       this.isProcessing = false;
     }
   }
 
-  /**
-   * Process a single notification queue item
-   */
+  // Process a single queue item
   private static async processItem(item: QueueItem) {
     try {
       // Mark as processing
@@ -67,7 +65,6 @@ export class NotificationQueueProcessor {
       // Get match details
       const matchDoc = await dbAdmin.collection("matches").doc(item.matchId).get();
       if (!matchDoc.exists) {
-        console.error(`[Queue] Match ${item.matchId} not found`);
         await this.markFailed(item.id, "Match not found");
         return;
       }
@@ -81,7 +78,6 @@ export class NotificationQueueProcessor {
       // Get user data
       const userDoc = await dbAdmin.collection("users").doc(item.userId).get();
       if (!userDoc.exists) {
-        console.error(`[Queue] User ${item.userId} not found`);
         await this.markFailed(item.id, "User not found");
         return;
       }
@@ -106,15 +102,13 @@ export class NotificationQueueProcessor {
             );
             success = true;
           } catch (error: any) {
-            console.error(`[Queue] Email failed:`, error.message);
+            // Email failed - will retry
           }
-        } else {
-          console.log(`[Queue] No email for user ${item.userId}`);
         }
       } else if (item.type === "fcm") {
         try {
           const result = await FCMTokenManager.sendToUser(item.userId, {
-            title: "🎉 Item Match Found!",
+            title: "Item Match Found!",
             body: `We found a ${(matchData.similarityScore * 100).toFixed(0)}% match for your lost ${matchData.lostItemCategory || "item"}`,
             data: {
               matchId: item.matchId,
@@ -126,7 +120,7 @@ export class NotificationQueueProcessor {
 
           success = result.success > 0;
         } catch (error: any) {
-          console.error(`[Queue] FCM failed:`, error.message);
+          // FCM failed - will retry
         }
       }
 
@@ -148,14 +142,11 @@ export class NotificationQueueProcessor {
         await this.scheduleRetry(item);
       }
     } catch (error: any) {
-      console.error(`[Queue] Error processing item ${item.id}:`, error);
       await this.scheduleRetry(item, error.message);
     }
   }
 
-  /**
-   * Schedule a retry for a failed notification
-   */
+  // Schedule retry with backoff delay
   private static async scheduleRetry(item: QueueItem, errorMessage?: string) {
     const newRetryCount = item.retryCount + 1;
 
@@ -175,9 +166,7 @@ export class NotificationQueueProcessor {
     });
   }
 
-  /**
-   * Mark an item as permanently failed
-   */
+  // Mark item as permanently failed
   private static async markFailed(itemId: string, reason: string) {
     await dbAdmin.collection("notificationQueue").doc(itemId).update({
       status: "failed",
@@ -185,9 +174,7 @@ export class NotificationQueueProcessor {
     });
   }
 
-  /**
-   * Clean up old completed/failed items (older than 7 days)
-   */
+  // Remove old completed/failed items (7+ days)
   static async cleanup() {
     try {
       const sevenDaysAgo = admin.firestore.Timestamp.fromDate(
@@ -207,7 +194,7 @@ export class NotificationQueueProcessor {
 
       await batch.commit();
     } catch (error) {
-      console.error("[Queue] Cleanup error:", error);
+      // Cleanup error - non-critical
     }
   }
 }

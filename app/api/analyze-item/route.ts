@@ -1,11 +1,10 @@
+// Uses Gemini AI to analyze item images and generate embeddings
+
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import axios from "axios";
 import { getBlurredCloudinaryUrl } from "@/lib/cloudinary";
-// REMOVED: import { doc, updateDoc } from "firebase/firestore";
-// REMOVED: import { db } from "@/lib/firebase";
 
-// ADDED: Import the Admin DB
 import { dbAdmin } from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
@@ -66,7 +65,7 @@ export async function POST(req: NextRequest) {
         const cleaned = responseText.replace(/```json|```/gi, "").trim();
         analysis = JSON.parse(cleaned);
     } catch (e) {
-        console.warn("JSON parse failed, using fallback.");
+        // JSON parse failed, using fallback
         analysis = { 
             description: "AI Analysis Failed", 
             category: "Unknown", 
@@ -103,7 +102,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, data: analysis });
 
   } catch (err: any) {
-    console.error("Analysis Error:", err);
     return NextResponse.json(
       { error: "Analysis failed", details: err.message },
       { status: 500 }

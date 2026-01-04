@@ -21,7 +21,7 @@ export default function Home() {
       await logout();
       router.push("/auth/login");
     } catch (error) {
-      console.error("Logout failed:", error);
+      // Logout failed
     }
   };
 
@@ -50,6 +50,24 @@ export default function Home() {
             <div className="flex items-center gap-4">
               {user ? (
                 <>
+                  <button
+                    onClick={() => router.push("/search")}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
+                  >
+                    Search
+                  </button>
+                  <button
+                    onClick={() => router.push("/matches")}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
+                  >
+                    Matches
+                  </button>
+                  <button
+                    onClick={() => router.push("/profile")}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
+                  >
+                    Profile
+                  </button>
                   <div className="hidden sm:block text-sm text-gray-600">
                     {user.email}
                   </div>

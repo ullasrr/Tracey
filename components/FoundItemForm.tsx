@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import imageCompression from "browser-image-compression";
 import { uploadToCloudinary } from "@/lib/uploadToCloudinary";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import MapPicker from "@/components/MapPicker";
 import { registerFcmToken } from "@/lib/firebase-messaging";
@@ -14,8 +14,41 @@ export default function FoundItemForm({ uid }: { uid: string }) {
     null
   );
   const [loading, setLoading] = useState(false);
+  const [checkingPrefs, setCheckingPrefs] = useState(true);
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
   const [itemSubmitted, setItemSubmitted] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [userDeclined, setUserDeclined] = useState(false);
+
+  // Check if user has push notifications enabled on mount
+  useEffect(() => {
+    const checkPushPreference = async () => {
+      try {
+        const userDoc = await getDoc(doc(db, "users", uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const isPushEnabled = userData?.notificationPreferences?.pushEnabled ?? false;
+          const hasDeclined = userData?.notificationPreferences?.userDeclined ?? false;
+          setPushEnabled(isPushEnabled);
+          setUserDeclined(hasDeclined);
+          // Only show notification prompt if push is not enabled AND user hasn't declined before
+          if (!isPushEnabled && !hasDeclined) {
+            setShowNotificationPrompt(true);
+          }
+        } else {
+          // User doc doesn't exist, show notification prompt
+          setShowNotificationPrompt(true);
+        }
+      } catch (err) {
+        // On error, proceed with form
+        setShowNotificationPrompt(false);
+      } finally {
+        setCheckingPrefs(false);
+      }
+    };
+
+    checkPushPreference();
+  }, [uid]);
 
   const handleSubmit = async () => {
     if (!file || !location) {
@@ -50,8 +83,6 @@ export default function FoundItemForm({ uid }: { uid: string }) {
         createdAt: serverTimestamp(),
         });
 
-        console.log("[FoundItemForm] Created found item:", docRef.id);
-
         // Wait for AI analysis to complete before triggering auto-match
         try {
           const analyzeResponse = await fetch("/api/analyze-item", {
@@ -65,37 +96,29 @@ export default function FoundItemForm({ uid }: { uid: string }) {
             }),
           });
 
-          if (!analyzeResponse.ok) {
-            console.error("[FoundItemForm] AI analysis failed:", await analyzeResponse.text());
-          } else {
-            console.log("[FoundItemForm] AI analysis completed successfully");
-            
+          if (analyzeResponse.ok) {
             // Now trigger auto-match after AI has generated embeddings
-            const matchResponse = await fetch("/api/auto-match", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                itemId: docRef.id,
-              }),
-            });
-
-            if (matchResponse.ok) {
-              const matchData = await matchResponse.json();
-              console.log("[FoundItemForm] Auto-match result:", matchData);
-            } else {
-              console.error("[FoundItemForm] Auto-match failed:", await matchResponse.text());
+            try {
+              await fetch("/api/auto-match", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ itemId: docRef.id }),
+              });
+            } catch (matchErr) {
+              // Silent fail - matching is async
             }
           }
         } catch (apiErr) {
-          console.error("[FoundItemForm] API call error:", apiErr);
+          // Silent fail - AI analysis error
         }
 
         setItemSubmitted(true);
-        setShowNotificationPrompt(true);
+        // Show success message without notification prompt (since it was already shown before)
+        alert("Item reported successfully!");
+        // Reset form for new submission
+        setFile(null);
+        setLocation(null);
     } catch (err) {
-        console.error("Error submitting item:", err);
         alert("Something went wrong. Please try again.");
     } finally {
         setLoading(false);
@@ -117,16 +140,17 @@ export default function FoundItemForm({ uid }: { uid: string }) {
       }
 
       await registerFcmToken();
+      // Save to Firestore: pushEnabled = true, userDeclined = false
+      await setDoc(
+        doc(db, "users", uid),
+        { notificationPreferences: { pushEnabled: true, userDeclined: false } },
+        { merge: true }
+      );
       alert("Notifications enabled! You'll be notified when someone reports a matching item.");
+      setPushEnabled(true);
+      setUserDeclined(false);
       setShowNotificationPrompt(false);
-      
-      // Reset form for new submission
-      setItemSubmitted(false);
-      setFile(null);
-      setLocation(null);
     } catch (err) {
-      console.error("Failed to enable notifications:", err);
-      
       // Check if it's a permission issue
       if (Notification.permission === "denied") {
         alert(
@@ -141,33 +165,50 @@ export default function FoundItemForm({ uid }: { uid: string }) {
     }
   };
 
-  const handleSkipNotifications = () => {
+  const handleSkipNotifications = async () => {
+    // Save to Firestore: pushEnabled = false, userDeclined = true
+    await setDoc(
+      doc(db, "users", uid),
+      { notificationPreferences: { pushEnabled: false, userDeclined: true } },
+      { merge: true }
+    );
+    setUserDeclined(true);
     setShowNotificationPrompt(false);
-    setItemSubmitted(false);
-    setFile(null);
-    setLocation(null);
-    alert("Item reported successfully! You can enable notifications later.");
+    // Proceed to show the form
   };
 
-  if (itemSubmitted && showNotificationPrompt) {
+  // Show loading while checking preferences
+  if (checkingPrefs) {
+    return (
+      <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show notification prompt BEFORE the form when pushEnabled is false
+  if (showNotificationPrompt && !pushEnabled) {
     return (
       <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-6">
-          <div className="text-6xl mb-4">✅</div>
+          <div className="text-6xl mb-4">🔔</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Item Reported Successfully!
+            Enable Notifications
           </h2>
           <p className="text-gray-600">
-            Your found item has been added to our database.
+            Before you report a found item, would you like to enable notifications?
           </p>
         </div>
 
         <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-6">
           <div className="flex items-start gap-3">
-            <div className="text-3xl">🔔</div>
+            <div className="text-3xl">📱</div>
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">
-                Enable Notifications?
+                Why Enable Notifications?
               </h3>
               <p className="text-sm text-gray-600 mb-4">
                 Get notified instantly when someone reports a matching lost item. 

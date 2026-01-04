@@ -1,3 +1,5 @@
+// Manages FCM tokens and sends push notifications to users
+
 import { dbAdmin } from "./firebase-admin";
 import admin from "firebase-admin";
 
@@ -16,9 +18,7 @@ const TOKEN_EXPIRY_DAYS = 60; // Token considered expired after 60 days
 const CLEANUP_DAYS = 90; // Delete tokens older than 90 days
 
 export class FCMTokenManager {
-  /**
-   * Register a new FCM token for a user
-   */
+  // Register or update FCM token for a user
   static async registerToken(
     userId: string,
     token: string,
@@ -47,7 +47,6 @@ export class FCMTokenManager {
           expiresAt: expiresAt,
           deviceInfo: deviceInfo || tokenDoc.data().deviceInfo,
         });
-        console.log(`[FCM] Updated existing token for user ${userId}`);
       } else {
         // Add new token
         await dbAdmin
@@ -61,17 +60,13 @@ export class FCMTokenManager {
             lastUsedAt: now,
             expiresAt: expiresAt,
           });
-        console.log(`[FCM] Registered new token for user ${userId}`);
       }
     } catch (error) {
-      console.error(`[FCM] Error registering token:`, error);
       throw error;
     }
   }
 
-  /**
-   * Get all valid (non-expired) tokens for a user
-   */
+  // Get all non-expired tokens for a user
   static async getValidTokens(userId: string): Promise<string[]> {
     try {
       const now = admin.firestore.Timestamp.now();
@@ -85,14 +80,11 @@ export class FCMTokenManager {
 
       return tokensSnapshot.docs.map((doc) => doc.data().token);
     } catch (error) {
-      console.error(`[FCM] Error getting tokens:`, error);
       return [];
     }
   }
 
-  /**
-   * Send notification to all devices of a user
-   */
+  // Send push notification to all user devices
   static async sendToUser(
     userId: string,
     notification: {
@@ -101,11 +93,11 @@ export class FCMTokenManager {
       data?: { [key: string]: string };
     }
   ): Promise<{ success: number; failed: number }> {
+    let tokens: string[] = [];
     try {
-      const tokens = await this.getValidTokens(userId);
+      tokens = await this.getValidTokens(userId);
 
       if (tokens.length === 0) {
-        console.log(`[FCM] No valid tokens for user ${userId}`);
         return { success: 0, failed: 0 };
       }
 
@@ -119,10 +111,6 @@ export class FCMTokenManager {
       }));
 
       const result = await admin.messaging().sendEach(messages);
-
-      console.log(
-        `[FCM] Sent to user ${userId}: ${result.successCount} success, ${result.failureCount} failed`
-      );
 
       // Remove invalid tokens
       const invalidTokens: string[] = [];
@@ -148,14 +136,11 @@ export class FCMTokenManager {
         failed: result.failureCount,
       };
     } catch (error) {
-      console.error(`[FCM] Error sending to user:`, error);
       return { success: 0, failed: tokens.length || 0 };
     }
   }
 
-  /**
-   * Remove specific tokens for a user
-   */
+  // Remove specific tokens from user
   static async removeTokens(userId: string, tokens: string[]): Promise<void> {
     try {
       const batch = dbAdmin.batch();
@@ -174,15 +159,12 @@ export class FCMTokenManager {
       }
 
       await batch.commit();
-      console.log(`[FCM] Removed ${tokens.length} invalid tokens for user ${userId}`);
     } catch (error) {
-      console.error(`[FCM] Error removing tokens:`, error);
+      // Failed to remove invalid tokens
     }
   }
 
-  /**
-   * Clean up old/expired tokens (should be called periodically)
-   */
+  // Clean up expired tokens (run periodically)
   static async cleanupOldTokens(): Promise<void> {
     try {
       const cleanupDate = admin.firestore.Timestamp.fromDate(
@@ -190,9 +172,8 @@ export class FCMTokenManager {
       );
 
       // This needs to be run for all users - best called via cloud function
-      console.log("[FCM] Cleanup should be implemented as a scheduled function");
     } catch (error) {
-      console.error("[FCM] Error during cleanup:", error);
+      // Cleanup error
     }
   }
 }

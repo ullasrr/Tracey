@@ -38,59 +38,91 @@ export default function MatchesPage() {
   useEffect(() => {
     if (!user) return;
 
-    // Real-time listener for matches
-    const matchesQuery = query(
+    // Real-time listener for matches - get matches where user is EITHER owner OR finder
+    const matchesAsOwnerQuery = query(
       collection(db, "matches"),
       where("lostItemUserId", "==", user.uid)
     );
 
-    const unsubscribe = onSnapshot(
-      matchesQuery,
-      (snapshot) => {
-        const matchesData = snapshot.docs.map((doc) => {
-          return {
-            id: doc.id,
-            ...doc.data(),
-          };
-        }) as Match[];
+    const matchesAsFinderQuery = query(
+      collection(db, "matches"),
+      where("foundItemUserId", "==", user.uid)
+    );
 
-        // Sort by newest first
-        matchesData.sort((a, b) => {
-          const aTime = a.createdAt?.seconds || 0;
-          const bTime = b.createdAt?.seconds || 0;
-          return bTime - aTime;
-        });
+    const allMatches = new Map<string, Match>();
 
-        setMatches(matchesData);
-        setLoadingMatches(false);
+    const updateMatchesFromSnapshot = (snapshot: any) => {
+      snapshot.docs.forEach((docSnap: any) => {
+        const matchData = {
+          id: docSnap.id,
+          ...docSnap.data(),
+        } as Match;
+        allMatches.set(docSnap.id, matchData);
 
         // Mark unviewed matches as viewed
-        snapshot.docs.forEach((docSnap) => {
-          const data = docSnap.data();
-          if (!data.viewedAt) {
-            updateDoc(doc(db, "matches", docSnap.id), {
-              viewedAt: Timestamp.now(),
-            }).catch(err => console.error("[Matches] Error marking viewed:", err));
-          }
-        });
-      },
-      (error) => {
-        console.error("[Matches] Snapshot error:", error);
+        if (!docSnap.data().viewedAt) {
+          updateDoc(doc(db, "matches", docSnap.id), {
+            viewedAt: Timestamp.now(),
+          }).catch(() => {});
+        }
+      });
+
+      // Convert map to array and sort
+      const matchesArray = Array.from(allMatches.values());
+      matchesArray.sort((a, b) => {
+        const aTime = a.createdAt?.seconds || 0;
+        const bTime = b.createdAt?.seconds || 0;
+        return bTime - aTime;
+      });
+
+      setMatches(matchesArray);
+      setLoadingMatches(false);
+    };
+
+    // Subscribe to both queries
+    const unsubscribeOwner = onSnapshot(
+      matchesAsOwnerQuery,
+      updateMatchesFromSnapshot,
+      () => {
         setLoadingMatches(false);
       }
     );
 
-    return () => unsubscribe();
+    const unsubscribeFinder = onSnapshot(
+      matchesAsFinderQuery,
+      updateMatchesFromSnapshot,
+      () => {
+        setLoadingMatches(false);
+      }
+    );
+
+    return () => {
+      unsubscribeOwner();
+      unsubscribeFinder();
+    };
   }, [user]);
 
   const handleClaim = async (matchId: string) => {
+    if (!user) return;
+    
     try {
-      await updateDoc(doc(db, "matches", matchId), {
-        status: "claimed",
+      // Use API to claim match (server-side with admin SDK bypasses permissions)
+      const response = await fetch("/api/claim-match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          matchId, 
+          userId: user.uid 
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to claim match");
+      }
+      
       alert("Match claimed! You can now coordinate with the finder.");
     } catch (error) {
-      console.error("Error claiming match:", error);
       alert("Failed to claim match. Please try again.");
     }
   };
@@ -101,7 +133,6 @@ export default function MatchesPage() {
         status: "dismissed",
       });
     } catch (error) {
-      console.error("Error dismissing match:", error);
       alert("Failed to dismiss match. Please try again.");
     }
   };
@@ -120,10 +151,18 @@ export default function MatchesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
       <div className="max-w-4xl mx-auto py-8">
+        {/* Back Button */}
+        <button
+          onClick={() => router.push("/")}
+          className="mb-4 text-purple-600 hover:text-purple-800 font-semibold flex items-center gap-2"
+        >
+          ← Back to Home
+        </button>
+
         {/* Header */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            🎯 Your Matches
+            Your Matches
           </h1>
           <p className="text-gray-600">
             AI-powered matches for your lost items
@@ -152,7 +191,8 @@ export default function MatchesPage() {
             {matches.map((match) => (
               <div
                 key={match.id}
-                className={`bg-white rounded-lg shadow-md p-6 transition-all ${
+                onClick={() => router.push(`/matches/${match.id}`)}
+                className={`bg-white rounded-lg shadow-md p-6 transition-all cursor-pointer hover:shadow-lg ${
                   match.status === "dismissed" ? "opacity-60" : ""
                 }`}
               >
@@ -216,16 +256,37 @@ export default function MatchesPage() {
                 {match.status === "pending" && (
                   <div className="flex gap-3 mt-4 pt-4 border-t">
                     <button
-                      onClick={() => handleClaim(match.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClaim(match.id);
+                      }}
                       className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
                     >
                       ✓ This is My Item
                     </button>
                     <button
-                      onClick={() => handleDismiss(match.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDismiss(match.id);
+                      }}
                       className="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
                     >
                       Not My Item
+                    </button>
+                  </div>
+                )}
+
+                {/* View Details for Claimed Matches */}
+                {match.status === "claimed" && (
+                  <div className="mt-4 pt-4 border-t">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/matches/${match.id}`);
+                      }}
+                      className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition flex items-center justify-center gap-2"
+                    >
+                      View Details & Contact via WhatsApp
                     </button>
                   </div>
                 )}
