@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tracey | AI-Powered Lost & Found Platform
 
-## Getting Started
+Tracey is an intelligent recovery ecosystem that uses Multimodal AI and Semantic Search to reunite people with their lost belongings. By automating the identification, matching, and notification process, Tracey replaces fragmented manual systems with a secure, automated digital hub.
 
-First, run the development server:
+## The Problem
+Traditional lost-and-found processes are broken. Information is scattered across WhatsApp groups and physical notice boards, manual logging is slow, and public posts often expose sensitive personal data (like IDs) to the public.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Key Features
+* **AI Auto-Logging:** Uses Google Gemini Vision to automatically extract item attributes (type, color, brand) from a single photo.
+* **Semantic Search:** Enables "human-like" natural language queries (e.g., "blue leather bag") using Vector Embeddings.
+* **Privacy-First Redaction:** Automatically detects and blurs sensitive PII (Personally Identifiable Information) on IDs using AI before publication.
+* **Automated Matching:** A real-time engine calculates Cosine Similarity between lost and found reports to find matches instantly.
+* **Instant Notifications:** Automated alerts via Email (Resend) and Push Notifications (FCM) when a high-probability match is detected.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tech Stack
+* **Frontend:** Next.js, Tailwind CSS, Lucide Icons
+* **Backend & Auth:** Firebase (Authentication, Firestore, Admin SDK)
+* **Artificial Intelligence:** Google Gemini (2.0 Flash & Text Embeddings)
+* **Media Handling:** Cloudinary (Storage & AI Redaction)
+* **Communication:** Resend API (Email) & Firebase Cloud Messaging (Push)
+* **Deployment:** Vercel
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How It Works
+1.  **Report:** User uploads a photo or description of a lost/found item.
+2.  **Process:** Gemini AI analyzes the image, generates tags, and creates a mathematical vector embedding.
+3.  **Secure:** If an ID is detected, the system blurs sensitive areas via Cloudinary.
+4.  **Match:** The system runs a Cosine Similarity check against the database.
+5.  **Reunite:** If a match exceeds a confidence threshold, both parties are notified instantly.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Process flowchart
+<img width="1305" height="793" alt="diagram-export-1-4-2026-4_13_21-PM" src="https://github.com/user-attachments/assets/12e0d5ab-a04b-4763-af40-2144ea2a6c23" />
 
-## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+## Architecture
+<img width="2156" height="1003" alt="diagram-export-1-4-2026-4_30_09-PM" src="https://github.com/user-attachments/assets/b63fdebf-3533-4ade-9362-5b9aa8b9269c" />
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
