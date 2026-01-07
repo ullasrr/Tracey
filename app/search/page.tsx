@@ -459,10 +459,7 @@ export default function SearchPage() {
               />
               <div className="flex-1">
                 <p className="font-semibold text-lg text-gray-800">{item.category}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {item.colorTags?.map((c: string) => (
-                      <span key={c} className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">{c}</span>
-                  ))}
+                <div className="mt-2">
                   <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Match: {(item.score * 100).toFixed(0)}%</span>
                 </div>
               </div>
