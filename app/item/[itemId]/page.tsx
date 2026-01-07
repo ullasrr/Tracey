@@ -46,7 +46,6 @@ export default function ItemDetailsPage() {
   const [finderDetails, setFinderDetails] = useState<FinderDetails | null>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [claiming, setClaiming] = useState(false);
-  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!itemId) return;
@@ -210,24 +209,11 @@ export default function ItemDetailsPage() {
             <img
               src={item.imageUrl}
               alt="Found item"
-              className="w-full h-72 object-cover rounded-lg cursor-pointer hover:opacity-90 transition"
-              onClick={() => setFullscreenImage(item.imageUrl!)}
+              className="w-full h-72 object-cover rounded-lg blur-md"
             />
           ) : (
             <div className="w-full h-72 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
               No image available
-            </div>
-          )}
-          
-          {/* Color Tags */}
-          {item.colorTags && item.colorTags.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="text-sm text-gray-600">Colors:</span>
-              {item.colorTags.map((color) => (
-                <span key={color} className="text-sm bg-gray-100 px-3 py-1 rounded-full text-gray-700">
-                  {color}
-                </span>
-              ))}
             </div>
           )}
         </div>
@@ -344,27 +330,6 @@ export default function ItemDetailsPage() {
           </div>
         )}
       </div>
-
-      {/* Fullscreen Image Modal */}
-      {fullscreenImage && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
-          onClick={() => setFullscreenImage(null)}
-        >
-          <button
-            className="absolute top-4 right-4 text-white text-4xl font-bold hover:text-gray-300 transition"
-            onClick={() => setFullscreenImage(null)}
-          >
-            ×
-          </button>
-          <img
-            src={fullscreenImage}
-            alt="Full size"
-            className="max-w-full max-h-full object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
     </div>
   );
 }
