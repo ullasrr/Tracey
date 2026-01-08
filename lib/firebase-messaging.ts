@@ -8,6 +8,9 @@ import { auth } from "@/lib/firebase";
 async function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
     try {
+      // Setup navigation listener for all service worker messages
+      setupServiceWorkerNavigationListener();
+      
       // Check if service worker is already registered
       const existing = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
       if (existing) {
@@ -26,6 +29,24 @@ async function registerServiceWorker() {
     }
   }
   throw new Error("Service Worker not supported");
+}
+
+// Track if listener is already setup to avoid duplicates
+let navigationListenerSetup = false;
+
+// Setup listener for service worker navigation messages
+export function setupServiceWorkerNavigationListener() {
+  if (navigationListenerSetup) return;
+  
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if (event.data?.type === "NOTIFICATION_CLICK" && event.data?.url) {
+        // Navigate to the URL sent from service worker
+        window.location.href = event.data.url;
+      }
+    });
+    navigationListenerSetup = true;
+  }
 }
 
 // registering FCM token for the logged-in user
