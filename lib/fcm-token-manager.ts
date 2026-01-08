@@ -103,11 +103,13 @@ export class FCMTokenManager {
 
       const messages = tokens.map((token) => ({
         token,
-        notification: {
+        // Only send data payload - let service worker handle notification display
+        // This prevents duplicate notifications (one from FCM, one from SW)
+        data: {
           title: notification.title,
           body: notification.body,
+          ...(notification.data || {}),
         },
-        data: notification.data || {},
       }));
 
       const result = await admin.messaging().sendEach(messages);
