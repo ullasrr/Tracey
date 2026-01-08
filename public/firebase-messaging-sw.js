@@ -1,6 +1,6 @@
-// Tracey FCM Service Worker v3 - data-only payload for single notification
+// Tracey FCM Service Worker v4 - handles notification + data payloads
 // IMPORTANT: Update version when making changes to force browser to re-fetch
-const SW_VERSION = "3.0.0";
+const SW_VERSION = "4.0.0";
 
 importScripts("https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js");
@@ -17,8 +17,16 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  // Read title/body from data payload (not notification payload)
-  // This prevents duplicate notifications
+  // If notification payload exists, FCM already shows the notification
+  // We only need to handle data-only messages (fallback for web)
+  if (payload.notification) {
+    // FCM will auto-display this, skip manual notification
+    // But we can still log it for debugging
+    console.log("[SW] FCM auto-displayed notification:", payload.notification.title);
+    return;
+  }
+
+  // Handle data-only messages (legacy/fallback)
   const title = payload.data?.title || "Tracey";
   const body = payload.data?.body || "We found an item that may belong to you.";
   
