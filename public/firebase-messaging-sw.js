@@ -1,6 +1,6 @@
-// Tracey FCM Service Worker v2 - with unique notification tags
+// Tracey FCM Service Worker v3 - data-only payload for single notification
 // IMPORTANT: Update version when making changes to force browser to re-fetch
-const SW_VERSION = "2.0.0";
+const SW_VERSION = "3.0.0";
 
 importScripts("https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js");
@@ -17,9 +17,10 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  const title = payload.notification?.title || "Tracey";
-  const body =
-    payload.notification?.body || "We found an item that may belong to you.";
+  // Read title/body from data payload (not notification payload)
+  // This prevents duplicate notifications
+  const title = payload.data?.title || "Tracey";
+  const body = payload.data?.body || "We found an item that may belong to you.";
   
   const matchId = payload.data?.matchId;
   const notificationType = payload.data?.type || "general";
