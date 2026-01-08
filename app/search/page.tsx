@@ -412,7 +412,7 @@ export default function SearchPage() {
                 ref={fileInputRef}
                 accept="image/*"
                 onChange={handleImageSelect}
-                className="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                className="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
             />
         </div>
 
@@ -422,7 +422,7 @@ export default function SearchPage() {
                 <img src={selectedImage} alt="Preview" className="w-full h-full object-cover rounded-md border" />
                 <button 
                     onClick={clearImage}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 text-xs"
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 text-xs cursor-pointer"
                 >
                     ✕
                 </button>
@@ -432,7 +432,7 @@ export default function SearchPage() {
         <button
           onClick={handleSearch}
           disabled={loading || (!query && !selectedImage)}
-          className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition"
+          className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition cursor-pointer"
         >
           {loading ? "Searching..." : "Search"}
         </button>
@@ -469,7 +469,7 @@ export default function SearchPage() {
             <div className="mt-4 pt-3 border-t">
               <button
                 onClick={() => handleViewItem(item.id)}
-                className="w-full py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>👁</span>
                 View Details & Claim

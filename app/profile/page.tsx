@@ -94,7 +94,7 @@ export default function ProfilePage() {
         {/* Back Button */}
         <button
           onClick={() => router.push("/")}
-          className="mb-6 text-purple-600 hover:text-purple-800 font-semibold flex items-center gap-2"
+          className="mb-6 text-purple-600 hover:text-purple-800 font-semibold flex items-center gap-2 cursor-pointer"
         >
           ← Back to Home
         </button>
@@ -174,7 +174,7 @@ export default function ProfilePage() {
             <button
               onClick={handleSaveProfile}
               disabled={saving}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
             >
               {saving ? (
                 <>

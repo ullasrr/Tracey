@@ -182,7 +182,7 @@ export default function ItemDetailsPage() {
         {/* Back Button */}
         <button
           onClick={() => router.push("/search")}
-          className="mb-4 text-purple-600 hover:text-purple-800 font-semibold flex items-center gap-2"
+          className="mb-4 text-purple-600 hover:text-purple-800 font-semibold flex items-center gap-2 cursor-pointer"
         >
           ← Back to Search
         </button>
@@ -244,7 +244,7 @@ export default function ItemDetailsPage() {
                     '_blank'
                   );
                 }}
-                className="ml-auto text-blue-600 hover:text-blue-800 font-medium"
+                className="ml-auto text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
               >
                 Open in Google Maps →
               </button>
@@ -308,7 +308,7 @@ export default function ItemDetailsPage() {
             <button
               onClick={handleClaimAndContact}
               disabled={claiming || !finderDetails?.phoneNumber}
-              className="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-lg hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 text-lg"
+              className="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-lg hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 text-lg cursor-pointer"
             >
               {claiming ? (
                 <>
