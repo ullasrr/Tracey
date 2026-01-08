@@ -103,12 +103,32 @@ export class FCMTokenManager {
 
       const messages = tokens.map((token) => ({
         token,
-        // Only send data payload - let service worker handle notification display
-        // This prevents duplicate notifications (one from FCM, one from SW)
-        data: {
+        // Include notification payload for reliable delivery on Android/iOS
+        // Without this, backgrounded/killed apps may not receive notifications
+        notification: {
           title: notification.title,
           body: notification.body,
-          ...(notification.data || {}),
+        },
+        // Data payload for additional info
+        data: notification.data || {},
+        // Android specific - high priority ensures immediate delivery
+        android: {
+          priority: "high" as const,
+          notification: {
+            clickAction: "OPEN_MATCH",
+          },
+        },
+        // Web push options
+        webpush: {
+          headers: {
+            Urgency: "high",
+          },
+          notification: {
+            title: notification.title,
+            body: notification.body,
+            icon: "/icon-192x192.png",
+            requireInteraction: true,
+          },
         },
       }));
 
