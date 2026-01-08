@@ -1,3 +1,7 @@
+// Tracey FCM Service Worker v2 - with unique notification tags
+// IMPORTANT: Update version when making changes to force browser to re-fetch
+const SW_VERSION = "2.0.0";
+
 importScripts("https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js");
 
@@ -18,17 +22,30 @@ messaging.onBackgroundMessage((payload) => {
     payload.notification?.body || "We found an item that may belong to you.";
   
   const matchId = payload.data?.matchId;
+  const notificationType = payload.data?.type || "general";
+  const timestamp = payload.data?.timestamp || Date.now().toString();
+  
   const notificationUrl = matchId 
     ? `${self.location.origin}/matches/${matchId}`
     : `${self.location.origin}/matches`;
+
+  // Create a unique tag for each notification to prevent collapsing/caching issues
+  // Each matchId gets its own notification, general notifications use timestamp
+  const notificationTag = matchId 
+    ? `tracey-match-${matchId}` 
+    : `tracey-${notificationType}-${timestamp}`;
 
   self.registration.showNotification(title, {
     body,
     icon: "/icon-192.png",
     badge: "/icon-192.png",
+    tag: notificationTag, // Unique tag prevents notification collapsing
+    renotify: true, // Show notification even if same tag exists (updates it)
     data: {
       url: notificationUrl,
       matchId: matchId,
+      type: notificationType,
+      timestamp: timestamp,
     },
     requireInteraction: true, // Keep notification visible until user interacts
     actions: [
@@ -40,14 +57,20 @@ messaging.onBackgroundMessage((payload) => {
 
 // Handle notification click
 self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
+  const notificationData = event.notification.data || {};
+  const matchId = notificationData.matchId;
 
-  const urlToOpen = event.notification.data?.url || `${self.location.origin}/matches`;
+  event.notification.close();
 
   // Only open if user clicked "view" or the notification body (not dismiss)
   if (event.action === "close") {
     return;
   }
+
+  // Build URL from notification data - prefer matchId over stored url to avoid stale data
+  const urlToOpen = matchId 
+    ? `${self.location.origin}/matches/${matchId}`
+    : (notificationData.url || `${self.location.origin}/matches`);
 
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {

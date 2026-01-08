@@ -209,6 +209,7 @@ async function sendNotificationsToLostOwner(
             type: "match_found",
             action: "view_match",
             score: score.toString(),
+            timestamp: Date.now().toString(),
           },
         });
         
@@ -259,6 +260,7 @@ async function sendNotificationsToFinder(
             type: "match_found",
             action: "view_match",
             score: score.toString(),
+            timestamp: Date.now().toString(),
           },
         });
         

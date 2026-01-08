@@ -183,6 +183,7 @@ async function sendNotificationsAsync(
             type: "match_found",
             action: "view_match",
             score: score.toString(),
+            timestamp: Date.now().toString(),
           },
         });
 
