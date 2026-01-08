@@ -218,7 +218,7 @@ export default function PreferencesPage() {
         {/* Back Button */}
         <button
           onClick={() => router.push("/")}
-          className="mb-4 text-purple-600 hover:text-purple-800 font-semibold flex items-center gap-2"
+          className="mb-4 text-purple-600 hover:text-purple-800 font-semibold flex items-center gap-2 cursor-pointer"
         >
           ← Back to Home
         </button>
@@ -243,7 +243,7 @@ export default function PreferencesPage() {
               </p>
               <button
                 onClick={() => setPermissionWarning("")}
-                className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
+                className="mt-2 text-xs text-red-600 hover:text-red-800 underline cursor-pointer"
               >
                 Dismiss
               </button>

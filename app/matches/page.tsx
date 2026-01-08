@@ -205,7 +205,7 @@ export default function MatchesPage() {
         {/* Back Button */}
         <button
           onClick={() => router.push("/")}
-          className="mb-4 text-purple-600 hover:text-purple-800 font-semibold flex items-center gap-2"
+          className="mb-4 text-purple-600 hover:text-purple-800 font-semibold flex items-center gap-2 cursor-pointer"
         >
           ← Back to Home
         </button>
@@ -232,7 +232,7 @@ export default function MatchesPage() {
             </p>
             <button
               onClick={() => router.push("/search")}
-              className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
+              className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition cursor-pointer"
             >
               Report Lost Item
             </button>
@@ -396,7 +396,7 @@ export default function MatchesPage() {
                         e.stopPropagation();
                         handleClaim(match.id);
                       }}
-                      className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
+                      className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition cursor-pointer"
                     >
                       This is My Item
                     </button>
@@ -405,7 +405,7 @@ export default function MatchesPage() {
                         e.stopPropagation();
                         handleDismiss(match.id);
                       }}
-                      className="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
+                      className="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition cursor-pointer"
                     >
                       Not My Item
                     </button>
@@ -429,7 +429,7 @@ export default function MatchesPage() {
                         e.stopPropagation();
                         router.push(`/matches/${match.id}`);
                       }}
-                      className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition flex items-center justify-center gap-2"
+                      className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition flex items-center justify-center gap-2 cursor-pointer"
                     >
                       View Details & Contact via WhatsApp
                     </button>
@@ -444,11 +444,11 @@ export default function MatchesPage() {
       {/* Fullscreen Image Modal */}
       {fullscreenImage && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4 cursor-pointer"
           onClick={() => setFullscreenImage(null)}
         >
           <button
-            className="absolute top-4 right-4 text-white text-4xl font-bold hover:text-gray-300 transition"
+            className="absolute top-4 right-4 text-white text-4xl font-bold hover:text-gray-300 transition cursor-pointer"
             onClick={() => setFullscreenImage(null)}
           >
             ×

@@ -242,7 +242,7 @@ export default function MatchDetailsPage() {
         {/* Back Button */}
         <button
           onClick={() => router.push("/matches")}
-          className="mb-4 text-purple-600 hover:text-purple-800 font-semibold flex items-center gap-2"
+          className="mb-4 text-purple-600 hover:text-purple-800 font-semibold flex items-center gap-2 cursor-pointer"
         >
           ← Back to Matches
         </button>
@@ -407,7 +407,7 @@ export default function MatchDetailsPage() {
                     '_blank'
                   );
                 }}
-                className="ml-auto text-blue-600 hover:text-blue-800 font-medium"
+                className="ml-auto text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
               >
                 Open in Google Maps →
               </button>
@@ -447,7 +447,7 @@ export default function MatchDetailsPage() {
                       const message = encodeURIComponent("Hi! I found your item through Tracey. Let's arrange the return.");
                       window.open(`https://wa.me/${cleanNumber}?text=${message}`, '_blank');
                     }}
-                    className="w-full mt-4 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all shadow-md flex items-center justify-center gap-2 text-lg"
+                    className="w-full mt-4 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all shadow-md flex items-center justify-center gap-2 text-lg cursor-pointer"
                   >
                     <span className="text-2xl">💬</span>
                     Contact via WhatsApp
@@ -488,13 +488,13 @@ export default function MatchDetailsPage() {
             <div className="flex gap-4">
               <button
                 onClick={handleClaim}
-                className="flex-1 bg-green-600 text-white px-6 py-4 rounded-lg font-semibold hover:bg-green-700 transition text-lg"
+                className="flex-1 bg-green-600 text-white px-6 py-4 rounded-lg font-semibold hover:bg-green-700 transition text-lg cursor-pointer"
               >
                 ✓ Yes, This is My Item
               </button>
               <button
                 onClick={handleDismiss}
-                className="flex-1 bg-gray-200 text-gray-700 px-6 py-4 rounded-lg font-semibold hover:bg-gray-300 transition text-lg"
+                className="flex-1 bg-gray-200 text-gray-700 px-6 py-4 rounded-lg font-semibold hover:bg-gray-300 transition text-lg cursor-pointer"
               >
                 Not My Item
               </button>
@@ -534,7 +534,7 @@ export default function MatchDetailsPage() {
                       const message = encodeURIComponent("Hi! I saw you found my item on Tracey. Can we arrange a time to meet?");
                       window.open(`https://wa.me/${cleanNumber}?text=${message}`, '_blank');
                     }}
-                    className="w-full mt-4 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all shadow-md flex items-center justify-center gap-2 text-lg"
+                    className="w-full mt-4 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all shadow-md flex items-center justify-center gap-2 text-lg cursor-pointer"
                   >
                     <span className="text-2xl">💬</span>
                     Contact Finder via WhatsApp
@@ -561,11 +561,11 @@ export default function MatchDetailsPage() {
       {/* Fullscreen Image Modal */}
       {fullscreenImage && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4 cursor-pointer"
           onClick={() => setFullscreenImage(null)}
         >
           <button
-            className="absolute top-4 right-4 text-white text-4xl font-bold hover:text-gray-300 transition"
+            className="absolute top-4 right-4 text-white text-4xl font-bold hover:text-gray-300 transition cursor-pointer"
             onClick={() => setFullscreenImage(null)}
           >
             ×

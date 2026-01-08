@@ -117,7 +117,7 @@ export default function FCMTestPage() {
       <div className="max-w-3xl mx-auto px-4">
         <button
           onClick={() => router.push("/")}
-          className="mb-6 text-blue-600 hover:text-blue-800 font-semibold"
+          className="mb-6 text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
         >
           ← Back to Home
         </button>
@@ -136,7 +136,7 @@ export default function FCMTestPage() {
             <button
               onClick={handleRegisterToken}
               disabled={registering}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {registering ? "Registering..." : "Register FCM Token"}
             </button>
@@ -198,7 +198,7 @@ export default function FCMTestPage() {
               <button
                 onClick={handleSendTestNotification}
                 disabled={sending || !selectedUserId}
-                className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {sending ? "Sending..." : "Send Test Notification"}
               </button>
