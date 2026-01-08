@@ -167,8 +167,8 @@ async function sendNotificationsAsync(
         await sendMatchEmail(userData.email, score, matchId, itemCategory);
         emailSent = true;
       } catch (err) {
-        // Add to retry queue
-        await addToNotificationQueue(matchId, userId, "email");
+        // Email failed - log error
+        console.error("Failed to send match email:", err);
       }
     }
 
@@ -188,13 +188,9 @@ async function sendNotificationsAsync(
         });
 
         notificationSent = fcmResult.success > 0;
-
-        if (fcmResult.failed > 0) {
-          // Add to retry queue
-          await addToNotificationQueue(matchId, userId, "fcm");
-        }
       } catch (err) {
-        await addToNotificationQueue(matchId, userId, "fcm");
+        // FCM failed - log error
+        console.error("Failed to send FCM notification:", err);
       }
     }
 
@@ -208,26 +204,4 @@ async function sendNotificationsAsync(
     // Fatal error - notification failed
   }
 }
-
-// Add failed notification to retry queue
-async function addToNotificationQueue(
-  matchId: string,
-  userId: string,
-  type: "email" | "fcm"
-) {
-  try {
-    await dbAdmin.collection("notificationQueue").add({
-      matchId,
-      userId,
-      type,
-      status: "pending",
-      retryCount: 0,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      nextRetryAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-  } catch (error) {
-    // Failed to add to queue
-  }
-}
-
 

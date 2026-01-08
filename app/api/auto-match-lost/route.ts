@@ -7,27 +7,6 @@ import { FCMTokenManager } from "@/lib/fcm-token-manager";
 
 export const runtime = "nodejs";
 
-// Add failed notification to retry queue
-async function addToNotificationQueue(
-  matchId: string,
-  userId: string,
-  type: "email" | "fcm"
-) {
-  try {
-    await dbAdmin.collection("notificationQueue").add({
-      matchId,
-      userId,
-      type,
-      status: "pending",
-      retryCount: 0,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      nextRetryAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-  } catch (error) {
-    // Failed to add to queue
-  }
-}
-
 function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length || a.length === 0) return 0;
   
@@ -213,15 +192,9 @@ async function sendNotificationsToLostOwner(
           },
         });
         
-        // Add to retry queue if failed
-        if (result.failed > 0 || result.success === 0) {
-          await addToNotificationQueue(matchId, userId, "fcm");
-        }
-        
         return result.success > 0;
       } catch (err) {
-        // Add to retry queue on error
-        await addToNotificationQueue(matchId, userId, "fcm");
+        console.error("Failed to send FCM notification to lost owner:", err);
         return false;
       }
     } else {
@@ -264,15 +237,9 @@ async function sendNotificationsToFinder(
           },
         });
         
-        // Add to retry queue if failed
-        if (result.failed > 0 || result.success === 0) {
-          await addToNotificationQueue(matchId, userId, "fcm");
-        }
-        
         return result.success > 0;
       } catch (err) {
-        // Add to retry queue on error
-        await addToNotificationQueue(matchId, userId, "fcm");
+        console.error("Failed to send FCM notification to finder:", err);
         return false;
       }
     } else {

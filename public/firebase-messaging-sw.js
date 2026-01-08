@@ -1,6 +1,6 @@
-// Tracey FCM Service Worker v4 - handles notification + data payloads
+// Tracey FCM Service Worker v5 - handles notification + data payloads
 // IMPORTANT: Update version when making changes to force browser to re-fetch
-const SW_VERSION = "4.0.0";
+const SW_VERSION = "5.0.0";
 
 importScripts("https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js");
@@ -86,10 +86,14 @@ self.addEventListener("notificationclick", (event) => {
       // Check if app is already open
       for (const client of clientList) {
         if (client.url.startsWith(self.location.origin) && "focus" in client) {
-          // Navigate to the match and focus
-          client.focus();
-          client.navigate(urlToOpen);
-          return;
+          // Focus the existing window and navigate via postMessage
+          return client.focus().then((focusedClient) => {
+            // Send navigation message to the client
+            focusedClient.postMessage({
+              type: "NOTIFICATION_CLICK",
+              url: urlToOpen,
+            });
+          });
         }
       }
       // If app not open, open new window
