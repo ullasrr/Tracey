@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       body: body || "This is a test notification to verify FCM is working correctly.",
       data: {
         type: "test",
-        timestamp: new Date().toISOString(),
+        timestamp: Date.now().toString(),
       },
     });
 

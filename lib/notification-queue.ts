@@ -115,6 +115,7 @@ export class NotificationQueueProcessor {
               type: "match_found",
               action: "view_match",
               score: matchData.similarityScore.toString(),
+              timestamp: Date.now().toString(),
             },
           });
 
