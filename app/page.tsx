@@ -47,33 +47,33 @@ export default function Home() {
               <h1 className="text-2xl font-bold text-gray-900">Tracey</h1>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-end">
               {user ? (
                 <>
                   <button
                     onClick={() => router.push("/search")}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
+                    className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer whitespace-nowrap"
                   >
                     Search
                   </button>
                   <button
                     onClick={() => router.push("/matches")}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
+                    className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer whitespace-nowrap"
                   >
                     Matches
                   </button>
                   <button
                     onClick={() => router.push("/profile")}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
+                    className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer whitespace-nowrap"
                   >
                     Profile
                   </button>
-                  <div className="hidden sm:block text-sm text-gray-600">
+                  <div className="hidden lg:block text-sm text-gray-600 max-w-[150px] truncate">
                     {user.email}
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
+                    className="px-3 sm:px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg cursor-pointer whitespace-nowrap"
                   >
                     Sign Out
                   </button>
